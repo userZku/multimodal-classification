@@ -91,3 +91,39 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : meilleure continuité entre travail quotidien et rendu final.
 - Risques / limites : double maintenance (journal + decision log) si discipline insuffisante.
 - Suivi / action : mettre à jour les deux supports à chaque session.
+
+## DEC-005 - Prioriser les erreurs critiques classe 2 -> 0
+- Date : 2026-07-16
+- Section notebook : 1.3 / 1.4
+- Statut : accepted
+- Contexte : dans le cas d'usage emploi, une sous-estimation des profils les plus à risque dégrade la prise en charge.
+- Décision : faire de la réduction des erreurs 2 -> 0 un critère métier prioritaire, en complément du F1 macro.
+- Alternatives considérées : optimisation unique du score global (accuracy/F1 global) sans pondération métier.
+- Justification : le coût social et opérationnel d'un faux négatif critique est supérieur à une légère baisse de score global.
+- Impact : orienter le choix de métriques vers recall classe 2 + suivi d'une matrice de confusion métier.
+- Risques / limites : possible dégradation de la précision sur les autres classes.
+- Suivi / action : confirmer les seuils cibles après EDA et validation de la distribution des classes.
+
+## DEC-006 - Imposer un scénario sans variable sensible
+- Date : 2026-07-16
+- Section notebook : 1.2 / 1.5
+- Statut : accepted
+- Contexte : la variable `nationalite_hors_ue` peut introduire un risque de biais ou de discrimination directe/indirecte.
+- Décision : intégrer explicitement un scénario comparatif sans variable sensible dans l'évaluation finale.
+- Alternatives considérées : conserver toutes les variables et corriger uniquement en post-analyse.
+- Justification : rendre l'arbitrage explicite, traçable et défendable sur le plan éthique/réglementaire.
+- Impact : meilleure gouvernance des choix de features, discussion transparente en soutenance.
+- Risques / limites : baisse de performance potentielle si la variable porte un signal prédictif non substituable.
+- Suivi / action : documenter l'écart de performance et l'arbitrage retenu en section 6.
+
+## DEC-007 - Distinguer cible initiale et cible révisée
+- Date : 2026-07-16
+- Section notebook : 1.4
+- Statut : accepted
+- Contexte : les seuils métier fixés avant EDA peuvent être irréalistes selon l'équilibre des classes et la qualité des données texte.
+- Décision : formaliser deux colonnes de pilotage : cible initiale client puis cible révisée après EDA.
+- Alternatives considérées : conserver une seule cible figée dès le cadrage.
+- Justification : évite les engagements non réalistes et clarifie la logique d'ajustement méthodologique.
+- Impact : pilotage plus robuste, transparence accrue sur les hypothèses et leur révision.
+- Risques / limites : perception de "déplacement du but" si la justification est insuffisante.
+- Suivi / action : expliciter les raisons de toute révision en section 3 et section 6.

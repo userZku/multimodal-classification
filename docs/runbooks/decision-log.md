@@ -127,3 +127,39 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : pilotage plus robuste, transparence accrue sur les hypothèses et leur révision.
 - Risques / limites : perception de "déplacement du but" si la justification est insuffisante.
 - Suivi / action : expliciter les raisons de toute révision en section 3 et section 6.
+
+## DEC-008 - Définir une acquisition minimale mais traçable
+- Date : 2026-07-16
+- Section notebook : 2.1 / 2.2 / 2.4
+- Statut : accepted
+- Contexte : le dataset est fourni en local dans le cadre du sujet, sans connecteur externe à maintenir.
+- Décision : documenter une acquisition simple (lecture CSV locale) avec traçabilité forte déjà posée en section 0.5.
+- Alternatives considérées : sur-ingénierie d'une couche d'ingestion dédiée (script ETL/API) dès cette étape.
+- Justification : proportionner l'effort au besoin certif tout en gardant la reproductibilité (source, version, hash).
+- Impact : section 2 claire, rapide à auditer et cohérente avec le livrable notebook.
+- Risques / limites : couverture limitée des cas d'ingestion multi-sources.
+- Suivi / action : enrichir l'industrialisation en section 8 si le cas d'usage évolue vers de nouvelles sources.
+
+## DEC-009 - Conserver une EDA orientée décision métier
+- Date : 2026-07-16
+- Section notebook : 3.2 / 3.3 / 3.4 / 3.5
+- Statut : accepted
+- Contexte : l'EDA peut devenir un inventaire de sorties difficilement exploitable en soutenance.
+- Décision : structurer l'EDA autour de questions décisionnelles (qualité, déséquilibre cible, relations avec risques) avec graphiques ciblés.
+- Alternatives considérées : approche exhaustive sans hiérarchisation des visualisations.
+- Justification : meilleure lisibilité pour le jury et lien direct avec les critères métier de section 1.
+- Impact : passage plus fluide vers les sections 4 à 6 et argumentaire renforcé en arbitrage.
+- Risques / limites : certains signaux faibles peuvent être manqués à ce niveau de synthèse.
+- Suivi / action : compléter au besoin par des analyses ad hoc dans des cellules annexes non centrales.
+
+## DEC-010 - Activer un mode d'affichage compact pour les catégorielles
+- Date : 2026-07-16
+- Section notebook : 3.3
+- Statut : accepted
+- Contexte : l'affichage complet des top modalités catégorielles prenait trop de place et nuisait à la lisibilité.
+- Décision : garder un affichage compact par défaut (synthèse cardinalité/manquants + graphique diplôme) et rendre le détail optionnel.
+- Alternatives considérées : conserver l'affichage détaillé permanent pour toutes les variables catégorielles.
+- Justification : compromis entre transparence analytique et lisibilité du récit de notebook.
+- Impact : section 3 plus concise, meilleure expérience de lecture en revue/soutenance.
+- Risques / limites : le détail n'apparaît pas sans activation explicite.
+- Suivi / action : basculer le flag de détail sur True uniquement lors d'investigations ciblées.

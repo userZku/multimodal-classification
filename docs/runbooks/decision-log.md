@@ -163,3 +163,27 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : section 3 plus concise, meilleure expérience de lecture en revue/soutenance.
 - Risques / limites : le détail n'apparaît pas sans activation explicite.
 - Suivi / action : basculer le flag de détail sur True uniquement lors d'investigations ciblées.
+
+## DEC-011 - Imposer un protocole anti-fuite pour le préprocessing
+- Date : 2026-07-16
+- Section notebook : 4.1 / 4.2 / 4.3
+- Statut : accepted
+- Contexte : la section 4 introduit des transformations apprenantes (imputation, encodage, TF-IDF) sensibles au risque de fuite de données.
+- Décision : appliquer `fit_transform` uniquement sur train et `transform` sur test pour tous les scénarios.
+- Alternatives considérées : ajuster le préprocessing sur l'ensemble des données avant split.
+- Justification : garantir une estimation honnête des performances et une comparaison équitable des 4 scénarios.
+- Impact : protocole d'évaluation robuste, reproductible et défendable en soutenance.
+- Risques / limites : complexité de code légèrement supérieure (objets de préprocessing par scénario).
+- Suivi / action : conserver ce protocole dans toutes les étapes de modélisation et validation croisée (section 5).
+
+## DEC-012 - Clôturer la section 4 avec un contrôle qualité exécutable
+- Date : 2026-07-16
+- Section notebook : 4.5
+- Statut : accepted
+- Contexte : la section 4 doit être validée avant modélisation pour éviter d'embarquer des incohérences dans la section 5.
+- Décision : finaliser 4.5 avec des assertions exécutables couvrant intégrité cible, split, features, préprocessing et scénarios.
+- Alternatives considérées : conserver uniquement des assertions commentées (non exécutées).
+- Justification : rendre la clôture de section objective, vérifiable et reproductible.
+- Impact : section 4 fermée avec une preuve d'exécution explicite (assertions validées).
+- Risques / limites : maintenance nécessaire si la structure de données évolue.
+- Suivi / action : exécuter la cellule 4.5 après toute modification de pipeline/scénario.

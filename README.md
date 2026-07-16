@@ -42,6 +42,7 @@ uv pip install -r requirements.txt
 ## Fichiers clés
 - Notebook de rendu : notebooks/multimodal-classification.ipynb
 - Journal de bord : reports/journal/journal-de-bord.ipynb
+- Fiche de décisions : docs/runbooks/decision-log.md
 - Workflow CI : .github/workflows/ci.yml
 - Dépendances : requirements.txt
 

@@ -187,3 +187,51 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : section 4 fermée avec une preuve d'exécution explicite (assertions validées).
 - Risques / limites : maintenance nécessaire si la structure de données évolue.
 - Suivi / action : exécuter la cellule 4.5 après toute modification de pipeline/scénario.
+
+## DEC-013 - Retenir le ML classique comme famille principale
+- Date : 2026-07-24
+- Section notebook : 5.0 / 5.0.1
+- Statut : accepted
+- Contexte : plusieurs familles de solutions étaient envisageables (ML classique, deep learning, SLM local, LLM API, architecture agentique).
+- Décision : retenir le ML classique comme famille principale pour le cas d'usage.
+- Alternatives considérées : deep learning tabulaire/texte, SLM local, LLM API + RAG, architecture agentique.
+- Justification : meilleur ratio entre performance attendue, coût, explicabilité minimale et sobriété d'industrialisation sur un dataset de 2 500 lignes.
+- Impact : périmètre technique plus clair, stack plus légère et plus défendable en soutenance.
+- Risques / limites : certaines approches plus complexes ne sont pas explorées expérimentalement.
+- Suivi / action : documenter explicitement ce choix dans la section 5.0 avant la comparaison des modèles concrets.
+
+## DEC-014 - Comparer les modèles sur F1 macro, recall classe 2 et matrice de confusion
+- Date : 2026-07-24
+- Section notebook : 5.2 / 5.3 / 5.4
+- Statut : accepted
+- Contexte : le score global seul ne suffit pas à couvrir l'enjeu métier des faux négatifs critiques.
+- Décision : piloter la comparaison des modèles avec F1 macro, recall de la classe 2, accuracy en complément et matrice de confusion pour l'analyse finale.
+- Alternatives considérées : sélection uniquement sur accuracy ou sur F1 macro sans métrique métier dédiée.
+- Justification : équilibre entre lecture globale des performances et suivi du risque le plus coûteux (2 -> 0).
+- Impact : comparaison plus robuste des scénarios et base d'arbitrage plus alignée avec le cadrage métier.
+- Risques / limites : arbitrage multi-métriques plus nuancé à expliquer qu'un classement sur un score unique.
+- Suivi / action : conserver cette grille de lecture dans la section 6 et dans le monitoring futur.
+
+## DEC-015 - Limiter le tuning au couple classé rang 1
+- Date : 2026-07-24
+- Section notebook : 5.5
+- Statut : accepted
+- Contexte : une recherche d'hyperparamètres large sur tous les scénarios et modèles aurait alourdi le notebook et la narration.
+- Décision : restreindre le tuning au seul couple classé rang 1 après comparaison CV.
+- Alternatives considérées : absence de tuning, ou tuning exhaustif sur l'ensemble des couples scénario-modèle.
+- Justification : compromis pragmatique entre amélioration mesurable et simplicité de lecture/exécution.
+- Impact : gain de performance local sans transformer la section 5 en benchmark trop lourd.
+- Risques / limites : possibilité de manquer un couple moins bien classé initialement mais meilleur après tuning.
+- Suivi / action : signaler explicitement dans la section 5.7 que le tuning reste ciblé et non exhaustif.
+
+## DEC-016 - Retenir S1 + XGBoost comme baseline assistive sous garde-fous
+- Date : 2026-07-24
+- Section notebook : 5.6 / 5.7 / 6.1 / 6.2 / 6.3
+- Statut : accepted
+- Contexte : le scénario S1 avec XGBoost obtient la meilleure performance globale, mais le rappel de la classe 2 reste insuffisant et des erreurs critiques 2 -> 0 subsistent.
+- Décision : retenir S1 + XGBoost comme baseline de production assistive, avec escalade humaine et suivi explicite des erreurs critiques.
+- Alternatives considérées : retenir S2 par prudence éthique, ou privilégier S3/S4 pour des raisons de simplicité/explicabilité.
+- Justification : meilleur compromis global observé en test, tout en reconnaissant que le modèle ne doit pas être utilisé de façon autonome sur les cas sensibles.
+- Impact : trajectoire d'industrialisation clarifiée et arbitrage final défendable devant le jury.
+- Risques / limites : risque métier résiduel encore significatif sur la classe 2, plus exposition au biais car la variable sensible est présente dans S1.
+- Suivi / action : compléter ensuite la section 7 avec une stratégie d'abstention ou d'escalade basée sur la confiance prédictive.

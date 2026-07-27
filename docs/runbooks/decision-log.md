@@ -259,3 +259,15 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : discours analytique plus honnête, meilleure gestion du risque en soutenance, priorisation future d'un enrichissement de la collecte texte.
 - Risques / limites : perception de moindre maturité NLP à court terme ; amélioration de performance potentiellement limitée sans nouvelles données textuelles.
 - Suivi / action : intégrer un plan d'amélioration data (qualité/diversité des verbatims) avant toute montée en autonomie du modèle.
+
+## DEC-019 - Expliciter le mapping des features et traiter est_allocataire en catégorielle
+- Date : 2026-07-27
+- Section notebook : 4.1 / 4.2 / 4.3 / 5.2
+- Statut : accepted
+- Contexte : la sélection automatique par dtype rendait le pipeline moins lisible et pouvait faire varier le traitement de certaines colonnes selon le typage observé.
+- Décision : fixer des listes explicites de variables numériques et catégorielles, avec `est_allocataire` traité en catégorielle binaire, puis réutiliser ce mapping dans les scénarios et la validation croisée.
+- Alternatives considérées : conserver la détection automatique par type (`select_dtypes`) pour construire les blocs num/cat.
+- Justification : renforcer la cohérence métier du préprocessing, limiter les effets de bord liés aux dtypes, et améliorer l'auditabilité du notebook en soutenance.
+- Impact : pipeline plus déterministe et plus lisible ; amélioration observée de la couverture de la classe 2 sur test (recall 0,544) avec baisse des erreurs critiques 2 -> 0 (7 au lieu de 8), à performance globale quasi stable.
+- Risques / limites : maintenance manuelle du mapping requise si le schéma évolue ; risque d'oubli d'une nouvelle colonne sans assertions de contrôle.
+- Suivi / action : conserver les assertions de features non mappées et mettre à jour le mapping explicite à chaque évolution du dataset.

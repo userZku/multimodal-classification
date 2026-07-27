@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import json
+import logging
+from datetime import datetime, timezone
+from uuid import uuid4
+
+import joblib
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+
+from src.config import ABSTENTION_THRESHOLD, BEST_MODEL_METADATA_PATH, BEST_MODEL_PATH, PROJECT_ROOT
+from src.features.preprocessing import build_model_frame
+from src.api.schemas import (
+    HealthResponse,
+    PredictRequest,
+    PredictResponse,
+)
+
+app = FastAPI(
+    title="Multimodal Classification API",
+    version="1.0.0",
+    description="Inference API for return-to-employment delay classification.",
+)
+
+
+def load_artifacts() -> tuple[object | None, dict]:
+    pipeline = joblib.load(BEST_MODEL_PATH) if BEST_MODEL_PATH.exists() else None
+    metadata = (
+        json.loads(BEST_MODEL_METADATA_PATH.read_text(encoding="utf-8"))
+        if BEST_MODEL_METADATA_PATH.exists()
+        else {}
+    )
+    return pipeline, metadata
+
+
+PIPELINE, METADATA = load_artifacts()
+
+
+def model_version() -> str:
+    trained_at = METADATA.get("trained_at")
+    if trained_at:
+        return f"xgb-s1-{trained_at}"
+    return "unavailable"
+
+PREDICT_COUNTER = Counter("api_predict_total", "Number of predict requests", ["status"])
+PREDICT_LATENCY = Histogram("api_predict_latency_seconds", "Latency of predict endpoint")
+
+LOG_DIR = PROJECT_ROOT / "logs" / "inference"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+PREDICT_LOG_PATH = LOG_DIR / "api_predict_requests.jsonl"
+
+logger = logging.getLogger("api.predict")
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    handler = logging.FileHandler(PREDICT_LOG_PATH, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(handler)
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(
+        status="ok",
+        model_loaded=PIPELINE is not None,
+        model_version=model_version(),
+    )
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.post("/predict", response_model=PredictResponse)
+def predict(payload: PredictRequest) -> PredictResponse:
+    if PIPELINE is None:
+        PREDICT_COUNTER.labels(status="model_not_ready").inc()
+        raise HTTPException(status_code=503, detail="Model artifact not found. Train model first.")
+
+    request_id = f"req_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}"
+    payload_dict = payload.model_dump()
+
+    with PREDICT_LATENCY.time():
+        try:
+            frame = pd.DataFrame([payload_dict])
+            model_frame = build_model_frame(frame)
+
+            proba = PIPELINE.predict_proba(model_frame)[0]
+            prediction = int(proba.argmax())
+            confidence = float(proba.max())
+            status = "a_revoir" if confidence < ABSTENTION_THRESHOLD else "ok"
+
+            PREDICT_COUNTER.labels(status=status).inc()
+        except Exception as exc:  # defensive path for runtime errors
+            PREDICT_COUNTER.labels(status="error").inc()
+            raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc
+
+    log_event = {
+        "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
+        "request_id": request_id,
+        "input": payload_dict,
+        "output": {
+            "prediction": prediction,
+            "confidence": confidence,
+            "status": status,
+            "model_version": model_version(),
+        },
+    }
+    logger.info(json.dumps(log_event, ensure_ascii=False))
+
+    return PredictResponse(
+        prediction=prediction,
+        confidence=confidence,
+        status=status,
+        model_version=model_version(),
+        request_id=request_id,
+    )

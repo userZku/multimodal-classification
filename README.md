@@ -54,7 +54,7 @@ Publication portfolio prévue :
 
 ## API
 
-Statut : en cours d'implémentation.
+Statut : implémentation de base opérationnelle (FastAPI).
 
 Surface cible :
 
@@ -62,7 +62,49 @@ Surface cible :
 - POST /predict : inférer la classe de délai de retour à l'emploi
 - GET /metrics : exposer des indicateurs techniques
 
+Mode d'exploitation actuel :
+
+- API minimale de mise à disposition d'un modèle déjà entraîné.
+- Le réentraînement est réalisé hors API (pipeline/notebook), puis les artefacts sont déposés dans `models/best_model/`.
+- Les inférences sont journalisées dans `logs/inference/api_predict_requests.jsonl`.
+
 Objectif portfolio : documentation Swagger exploitable, avec des exemples de requêtes et de réponses.
+
+Lancement local :
+
+1) Entraîner le modèle (si nécessaire) :
+
+```bash
+python -m src.modeling.train
+```
+
+2) Démarrer l'API :
+
+```bash
+uvicorn src.api.main:app --reload
+```
+
+Sous Windows avec le venv du projet :
+
+```bash
+.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
+```
+
+3) Tester rapidement :
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{"usager_id":"U_TEST_001","age":36,"niveau_diplome":"bac+2","anciennete_poste_ans":4.0,"code_rome_vise":"M1805","code_insee_commune":"75101","est_allocataire":1,"nationalite_hors_ue":0,"departement_insee":"75","synthese_entretien":"Motivation stable, projet coherent, recherche active."}'
+```
+
+Swagger UI :
+
+```text
+http://127.0.0.1:8000/docs
+```
 
 ## Docker et déploiement
 
@@ -94,8 +136,8 @@ Emplacement recommandé : reports/figures/
 - [x] Structuration projet (data, src, tests, infra, docs, reports)
 - [x] Base CI sur GitHub Actions
 - [x] Gouvernance (decision log, conventions)
-- [ ] Extraction complète du code notebook vers src/
-- [ ] API FastAPI opérationnelle
+- [x] Extraction du socle preprocessing/training/inference vers src/
+- [x] API FastAPI de base opérationnelle
 - [ ] Tests exécutés en CI
 - [ ] Docker / Docker Compose finalisés
 - [ ] Déploiement cible
@@ -107,6 +149,20 @@ Prérequis : Python 3.12
 ```bash
 uv venv --python 3.12
 uv pip install -r requirements.txt
+```
+
+## Entrainement hors notebook
+
+Module Python pour entrainer directement le modele final XGBoost du scenario S1 (multimodal complet) et sauvegarder les artefacts:
+
+```bash
+python -m src.modeling.train
+```
+
+Avec un CSV explicite:
+
+```bash
+python -m src.modeling.train --csv-path data/raw/mon_dataset.csv
 ```
 
 ## Structure du dépôt

@@ -17,3 +17,6 @@ Thumbs.db
 
 # Environment
 .env
+
+# Runtime logs
+logs/inference/*.jsonl

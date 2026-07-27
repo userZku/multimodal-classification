@@ -235,3 +235,27 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : trajectoire d'industrialisation clarifiée et arbitrage final défendable devant le jury.
 - Risques / limites : risque métier résiduel encore significatif sur la classe 2, plus exposition au biais car la variable sensible est présente dans S1.
 - Suivi / action : compléter ensuite la section 7 avec une stratégie d'abstention ou d'escalade basée sur la confiance prédictive.
+
+## DEC-017 - Encadrer la baseline par une politique d'escalade basée sur la confiance
+- Date : 2026-07-27
+- Section notebook : 7.2 / 7.2.1 / 7.4
+- Statut : accepted
+- Contexte : malgré de bons scores globaux, des erreurs critiques 2 -> 0 subsistent et imposent un garde-fou opérationnel.
+- Décision : retenir une logique d'usage assistif avec escalade humaine des cas incertains, calibrée par seuil de confiance et comparée à une variante combinée orientée risque classe 2.
+- Alternatives considérées : usage autonome sans abstention, ou escalade fixe non calibrée.
+- Justification : réduire le risque de faux négatifs critiques en ciblant les dossiers les plus ambigus, avec un arbitrage explicite entre charge manuelle et sécurité métier.
+- Impact : stratégie de fallback opérationnalisable, plus défendable en soutenance et compatible avec un déploiement progressif.
+- Risques / limites : gain parfois modeste de la règle combinée selon le seuil retenu ; surcharge potentielle de reprise manuelle si calibration trop prudente.
+- Suivi / action : fixer un seuil cible avec les parties prenantes (capacité opérationnelle) et suivre mensuellement le couple taux d'escalade / erreurs critiques résiduelles.
+
+## DEC-018 - Documenter la faible diversité textuelle comme limite structurante
+- Date : 2026-07-27
+- Section notebook : 3.7 / 5.7 / 7.4
+- Statut : accepted
+- Contexte : le corpus contient peu de verbatims réellement distincts au regard du volume total, ce qui fragilise le signal NLP.
+- Décision : considérer explicitement la faible diversité du texte comme une limite méthodologique majeure et interpréter prudemment les gains liés aux variables textuelles.
+- Alternatives considérées : traiter le texte comme un signal pleinement robuste sans réserve particulière.
+- Justification : réduire le risque de sur-interprétation et mieux cadrer le risque de sur-apprentissage sur des formulations répétitives.
+- Impact : discours analytique plus honnête, meilleure gestion du risque en soutenance, priorisation future d'un enrichissement de la collecte texte.
+- Risques / limites : perception de moindre maturité NLP à court terme ; amélioration de performance potentiellement limitée sans nouvelles données textuelles.
+- Suivi / action : intégrer un plan d'amélioration data (qualité/diversité des verbatims) avant toute montée en autonomie du modèle.

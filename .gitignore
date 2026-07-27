@@ -20,3 +20,6 @@ Thumbs.db
 
 # Runtime logs
 logs/inference/*.jsonl
+
+# Local model artifacts
+models/best_model/

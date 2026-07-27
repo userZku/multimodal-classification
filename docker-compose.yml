@@ -20,7 +20,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./infra/compose/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
   grafana:
     image: grafana/grafana:11.1.4

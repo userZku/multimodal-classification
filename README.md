@@ -138,7 +138,7 @@ Un dashboard est aussi provisionné automatiquement : `Multimodal API > Multimod
 
 - Dans `Status > Targets`, le job `multimodal-api` doit être `UP`.
 
-La configuration de scrape est dans `infra/compose/prometheus.yml`.
+La configuration de scrape est dans `infra/compose/prometheus/prometheus.yml`.
 
 ## Docker et déploiement
 

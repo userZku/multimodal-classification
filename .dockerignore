@@ -1,0 +1,13 @@
+.git
+.github
+.vscode
+.idea
+.venv
+__pycache__
+.pytest_cache
+.ipynb_checkpoints
+notebooks
+reports
+brief
+docs
+*.pyc

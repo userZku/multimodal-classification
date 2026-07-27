@@ -60,13 +60,15 @@ Surface cible :
 
 - GET /health : vérifier la disponibilité du service
 - POST /predict : inférer la classe de délai de retour à l'emploi
+- POST /retrain (alias POST /train) : réentraîner le modèle et recharger les artefacts
 - GET /metrics : exposer des indicateurs techniques
 
 Mode d'exploitation actuel :
 
 - API minimale de mise à disposition d'un modèle déjà entraîné.
-- Le réentraînement est réalisé hors API (pipeline/notebook), puis les artefacts sont déposés dans `models/best_model/`.
+- Le réentraînement peut être déclenché via l'API (`/retrain` ou `/train`) ou hors API (pipeline/notebook).
 - Les inférences sont journalisées dans `logs/inference/api_predict_requests.jsonl`.
+- Les événements d'entraînement sont journalisés dans `logs/inference/api_train_events.jsonl`.
 
 Objectif portfolio : documentation Swagger exploitable, avec des exemples de requêtes et de réponses.
 
@@ -105,6 +107,38 @@ Swagger UI :
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+### Brancher Prometheus et Grafana en local
+
+Option A - Stack Docker complete (API + Prometheus + Grafana) :
+
+1) Construire et démarrer la stack :
+
+```bash
+docker compose up -d --build
+```
+
+2) Ouvrir les interfaces :
+
+```text
+API docs: http://127.0.0.1:8000/docs
+Prometheus: http://127.0.0.1:9090
+Grafana: http://127.0.0.1:3000
+```
+
+Connexion Grafana (par défaut) :
+
+- login: `admin`
+- mot de passe: `admin`
+
+La datasource Prometheus est provisionnée automatiquement.
+Un dashboard est aussi provisionné automatiquement : `Multimodal API > Multimodal API Overview`.
+
+3) Vérifier la cible :
+
+- Dans `Status > Targets`, le job `multimodal-api` doit être `UP`.
+
+La configuration de scrape est dans `infra/compose/prometheus.yml`.
 
 ## Docker et déploiement
 

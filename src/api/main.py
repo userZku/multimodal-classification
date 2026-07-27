@@ -12,10 +12,13 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_
 
 from src.config import ABSTENTION_THRESHOLD, BEST_MODEL_METADATA_PATH, BEST_MODEL_PATH, PROJECT_ROOT
 from src.features.preprocessing import build_model_frame
+from src.modeling.train import train_and_save_model
 from src.api.schemas import (
     HealthResponse,
     PredictRequest,
     PredictResponse,
+    TrainRequest,
+    TrainResponse,
 )
 
 app = FastAPI(
@@ -26,7 +29,13 @@ app = FastAPI(
 
 
 def load_artifacts() -> tuple[object | None, dict]:
-    pipeline = joblib.load(BEST_MODEL_PATH) if BEST_MODEL_PATH.exists() else None
+    pipeline = None
+    if BEST_MODEL_PATH.exists():
+        try:
+            pipeline = joblib.load(BEST_MODEL_PATH)
+        except Exception:
+            # API must stay up even if local model artifact cannot be deserialized.
+            pipeline = None
     metadata = (
         json.loads(BEST_MODEL_METADATA_PATH.read_text(encoding="utf-8"))
         if BEST_MODEL_METADATA_PATH.exists()
@@ -46,10 +55,13 @@ def model_version() -> str:
 
 PREDICT_COUNTER = Counter("api_predict_total", "Number of predict requests", ["status"])
 PREDICT_LATENCY = Histogram("api_predict_latency_seconds", "Latency of predict endpoint")
+TRAIN_COUNTER = Counter("api_train_total", "Number of train requests", ["status"])
+TRAIN_LATENCY = Histogram("api_train_latency_seconds", "Latency of train endpoint")
 
 LOG_DIR = PROJECT_ROOT / "logs" / "inference"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 PREDICT_LOG_PATH = LOG_DIR / "api_predict_requests.jsonl"
+TRAIN_LOG_PATH = LOG_DIR / "api_train_events.jsonl"
 
 logger = logging.getLogger("api.predict")
 if not logger.handlers:
@@ -57,6 +69,18 @@ if not logger.handlers:
     handler = logging.FileHandler(PREDICT_LOG_PATH, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(handler)
+
+train_logger = logging.getLogger("api.train")
+if not train_logger.handlers:
+    train_logger.setLevel(logging.INFO)
+    train_handler = logging.FileHandler(TRAIN_LOG_PATH, encoding="utf-8")
+    train_handler.setFormatter(logging.Formatter("%(message)s"))
+    train_logger.addHandler(train_handler)
+
+
+def reload_artifacts() -> None:
+    global PIPELINE, METADATA
+    PIPELINE, METADATA = load_artifacts()
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -116,4 +140,54 @@ def predict(payload: PredictRequest) -> PredictResponse:
         status=status,
         model_version=model_version(),
         request_id=request_id,
+    )
+
+
+@app.post("/retrain", response_model=TrainResponse)
+@app.post("/train", response_model=TrainResponse)
+def retrain(payload: TrainRequest) -> TrainResponse:
+    event_id = f"train_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}"
+
+    with TRAIN_LATENCY.time():
+        try:
+            metadata = train_and_save_model(csv_path=payload.dataset_path)
+            reload_artifacts()
+            TRAIN_COUNTER.labels(status="ok").inc()
+        except Exception as exc:
+            TRAIN_COUNTER.labels(status="error").inc()
+            train_logger.info(
+                json.dumps(
+                    {
+                        "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
+                        "event_id": event_id,
+                        "status": "error",
+                        "dataset_path": payload.dataset_path,
+                        "trigger": payload.trigger,
+                        "error": str(exc),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            raise HTTPException(status_code=500, detail=f"Training failed: {exc}") from exc
+
+    train_logger.info(
+        json.dumps(
+            {
+                "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
+                "event_id": event_id,
+                "status": "ok",
+                "dataset_path": payload.dataset_path,
+                "trigger": payload.trigger,
+                "model_version": model_version(),
+                "metrics": metadata.get("metrics", {}),
+            },
+            ensure_ascii=False,
+        )
+    )
+
+    return TrainResponse(
+        status="ok",
+        event_id=event_id,
+        model_version=model_version(),
+        metrics=metadata.get("metrics", {}),
     )

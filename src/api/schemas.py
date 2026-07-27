@@ -41,6 +41,28 @@ class PredictResponse(BaseModel):
     request_id: str
 
 
+class TrainRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "dataset_path": "data/raw/dataset_trajectoire_emploi_Sujet Examen CISIA - Promo Upskilling Atlas - mai-oct2026 (Session-00279143).csv",
+                "trigger": "manual",
+            }
+        },
+    )
+
+    dataset_path: str | None = None
+    trigger: str = "manual"
+
+
+class TrainResponse(BaseModel):
+    status: str
+    event_id: str
+    model_version: str
+    metrics: dict
+
+
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool

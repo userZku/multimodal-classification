@@ -1,0 +1,41 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    container_name: multimodal-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: multimodal-prometheus
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/compose/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: multimodal-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/compose/grafana/provisioning:/etc/grafana/provisioning:ro
+
+volumes:
+  grafana_data:

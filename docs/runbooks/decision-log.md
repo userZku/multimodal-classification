@@ -271,3 +271,27 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : pipeline plus déterministe et plus lisible ; amélioration observée de la couverture de la classe 2 sur test (recall 0,544) avec baisse des erreurs critiques 2 -> 0 (7 au lieu de 8), à performance globale quasi stable.
 - Risques / limites : maintenance manuelle du mapping requise si le schéma évolue ; risque d'oubli d'une nouvelle colonne sans assertions de contrôle.
 - Suivi / action : conserver les assertions de features non mappées et mettre à jour le mapping explicite à chaque évolution du dataset.
+
+## DEC-020 - Exposer une API minimaliste avec retrain contrôlé et observabilité native
+- Date : 2026-07-29
+- Section notebook : 8.2 / 8.3 / 8.4 / 9.1
+- Statut : accepted
+- Contexte : besoin d'une industrialisation démontrable en local avec un service d'inférence simple, un point de retrain et des indicateurs techniques visibles pour la soutenance.
+- Décision : conserver une API FastAPI centrée sur `/predict`, `/retrain` (et alias `/train`), `/health` et `/metrics`, instrumentée Prometheus et déployée via Docker Compose avec Prometheus + Grafana.
+- Alternatives considérées : API plus riche (versioning avancé, batch, auth) dès maintenant, ou exposition de l'inférence sans stack de monitoring.
+- Justification : prioriser la lisibilité architecture + preuve d'exploitabilité, tout en gardant un coût de maintenance adapté au périmètre certif.
+- Impact : démonstration bout en bout plus crédible (train, serving, métriques, dashboard), et base opérationnelle pour suivre le taux d'escalade et les erreurs critiques en section 9.
+- Risques / limites : absence d'authentification et de gouvernance multi-utilisateurs ; couverture limitée aux métriques techniques et applicatives de base.
+- Suivi / action : compléter ensuite avec gestion des accès, alerting et runbook d'exploitation en contexte réel.
+
+## DEC-021 - Activer le tracking MLflow sur l'entraînement et le retrain API
+- Date : 2026-07-29
+- Section notebook : 8.4 / 9.2
+- Statut : accepted
+- Contexte : la traçabilité des runs n'était pas active de bout en bout dans le flux de training/retraining.
+- Décision : intégrer MLflow directement dans `train.py` (params, métriques, features, artifacts, run_id) et propager les paramètres de tracking (`tracking_uri`, `experiment`) via l'endpoint `/retrain`.
+- Alternatives considérées : conserver uniquement les artefacts locaux (joblib + metadata JSON), ou connecter un registre de modèles complet dès cette itération.
+- Justification : améliorer la reproductibilité et la comparabilité des runs sans alourdir immédiatement la stack avec un registre distant.
+- Impact : chaque entraînement est historisé, corrélable aux métriques métier et exploitable dans l'UI MLflow ; la metadata du modèle contient désormais les identifiants de run.
+- Risques / limites : backend filesystem MLflow en mode maintenance (nécessite `MLFLOW_ALLOW_FILE_STORE=true`) et absence de workflow de promotion de modèle.
+- Suivi / action : planifier la migration vers un backend SQL (sqlite au minimum), puis définir une politique de sélection/promotion des runs gagnants.

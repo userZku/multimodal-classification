@@ -24,7 +24,10 @@ def test_health_endpoint_returns_ok_payload() -> None:
     assert "model_version" in data
 
 
-def test_predict_returns_503_when_model_not_trained() -> None:
+def test_predict_returns_503_when_model_not_trained(monkeypatch) -> None:
+    # Force deterministic behavior independent from local artifact state.
+    monkeypatch.setattr(api_main, "PIPELINE", None)
+
     payload = {
         "age": 35,
         "niveau_diplome": "Bac",
@@ -37,6 +40,22 @@ def test_predict_returns_503_when_model_not_trained() -> None:
     }
     response = client.post("/predict", json=payload)
     assert response.status_code == 503
+
+
+def test_predict_rejects_unknown_payload_field() -> None:
+    payload = {
+        "age": 35,
+        "niveau_diplome": "Bac",
+        "anciennete_poste_ans": 4.0,
+        "code_rome_vise": "M1602",
+        "est_allocataire": 1,
+        "nationalite_hors_ue": 0,
+        "departement_insee": "75",
+        "synthese_entretien": "Recherche active",
+        "unexpected_field": "forbidden",
+    }
+    response = client.post("/predict", json=payload)
+    assert response.status_code == 422
 
 
 def test_retrain_endpoint_returns_ok_with_mocked_training(monkeypatch) -> None:

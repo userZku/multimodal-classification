@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import pickle
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -46,8 +47,17 @@ def load_artifacts() -> tuple[object | None, dict]:
     if BEST_MODEL_PATH.exists():
         try:
             pipeline = joblib.load(BEST_MODEL_PATH)
-        except Exception:
+        except (
+            EOFError,
+            pickle.UnpicklingError,
+            ImportError,
+            AttributeError,
+            OSError,
+        ) as exc:
             # API must stay up even if local model artifact cannot be deserialized.
+            logging.getLogger("api.predict").warning(
+                "Failed to load pipeline artifact %s: %s", BEST_MODEL_PATH, exc
+            )
             pipeline = None
     metadata = (
         json.loads(BEST_MODEL_METADATA_PATH.read_text(encoding="utf-8"))
@@ -214,8 +224,16 @@ def predict(payload: PredictRequest) -> PredictResponse:
             status = "a_revoir" if confidence < ABSTENTION_THRESHOLD else "ok"
 
             PREDICT_COUNTER.labels(status=status).inc()
-        except Exception as exc:  # defensive path for runtime errors
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            IndexError,
+            AttributeError,
+            RuntimeError,
+        ) as exc:
             PREDICT_COUNTER.labels(status="error").inc()
+            logger.exception("Prediction failed for request %s: %s", request_id, exc)
             raise HTTPException(
                 status_code=500, detail=f"Prediction failed: {exc}"
             ) from exc
@@ -256,7 +274,7 @@ def retrain(payload: TrainRequest) -> TrainResponse:
             )
             reload_artifacts()
             TRAIN_COUNTER.labels(status="ok").inc()
-        except Exception as exc:
+        except (FileNotFoundError, OSError, ValueError, RuntimeError, TypeError) as exc:
             TRAIN_COUNTER.labels(status="error").inc()
             train_logger.info(
                 json.dumps(
@@ -270,6 +288,9 @@ def retrain(payload: TrainRequest) -> TrainResponse:
                     },
                     ensure_ascii=False,
                 )
+            )
+            logging.getLogger("api.train").exception(
+                "Training failed for event %s: %s", event_id, exc
             )
             raise HTTPException(
                 status_code=500, detail=f"Training failed: {exc}"

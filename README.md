@@ -1,4 +1,4 @@
-# Multimodal Classification Portfolio
+# Portfolio Classification Multimodale
 
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/fastapi-API-009688?logo=fastapi&logoColor=white)
@@ -7,7 +7,7 @@
 ![Prometheus](https://img.shields.io/badge/prometheus-metrics-E6522C?logo=prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/grafana-dashboard-F46800?logo=grafana&logoColor=white)
 
-## Executive Summary
+## Résumé
 
 Ce projet montre un cycle ML complet, de la modélisation au monitoring de service, sur un cas d'usage de classification multiclasse du délai de retour à l'emploi.
 
@@ -17,24 +17,24 @@ Points forts:
 |---|---|
 | Modeling | Pipeline tabulaire + texte, scénario S1 XGBoost, entraînement scriptable |
 | Serving | API FastAPI avec endpoints health, predict, retrain, metrics |
-| Observability | Prometheus + Grafana, logs JSONL, métriques applicatives |
+| Supervision | Prometheus + Grafana, logs JSONL, métriques applicatives |
 | Tracking | Runs MLflow (paramètres, métriques, artifacts, run metadata) |
 | Delivery | Workflow GitHub Actions CI/CD, build Docker, publication image GHCR |
 
-## Portfolio Table Of Contents
+## Sommaire
 
-1. [Business Problem](#business-problem)
-2. [System Architecture](#system-architecture)
-3. [Modeling Strategy](#modeling-strategy)
-4. [API Contract](#api-contract)
-5. [Observability Stack](#observability-stack)
-6. [CI/CD Pipeline](#cicd-pipeline)
-7. [Quickstart](#quickstart)
-8. [UI And Screenshots](#ui-and-screenshots)
-9. [Repository Structure](#repository-structure)
-10. [Certification Deliverables](#certification-deliverables)
+1. [Problème métier](#problème-métier)
+2. [Architecture du système](#architecture-du-système)
+3. [Stratégie de modélisation](#stratégie-de-modélisation)
+4. [Contrat API](#contrat-api)
+5. [Stack de supervision](#stack-de-supervision)
+6. [Pipeline CI/CD](#pipeline-cicd)
+7. [Démarrage rapide](#démarrage-rapide)
+8. [UI et captures d'écran](#ui-et-captures-décran)
+9. [Structure du dépôt](#structure-du-dépôt)
+10. [Livrables certification](#livrables-certification)
 
-## Business Problem
+## Problème Métier
 
 Objectif: prédire le délai de retour à l'emploi en 3 classes à partir de données socio-professionnelles et de verbatims d'entretien.
 
@@ -51,7 +51,7 @@ Références métier et décisions:
 - [docs/runbooks/decision-log.md](docs/runbooks/decision-log.md)
 - [reports/journal/journal-de-bord.ipynb](reports/journal/journal-de-bord.ipynb)
 
-## System Architecture
+## Architecture Du Système
 
 ```mermaid
 flowchart LR
@@ -73,14 +73,14 @@ flowchart TD
    P --> D[Deploy Webhook Optional]
 ```
 
-Infrastructure files:
+Fichiers d'infrastructure:
 
 - [docker-compose.yml](docker-compose.yml)
 - [infra/docker/Dockerfile](infra/docker/Dockerfile)
 - [infra/compose/prometheus/prometheus.yml](infra/compose/prometheus/prometheus.yml)
 - [infra/compose/grafana/provisioning/dashboards/json/multimodal-api-overview.json](infra/compose/grafana/provisioning/dashboards/json/multimodal-api-overview.json)
 
-## Modeling Strategy
+## Stratégie De Modélisation
 
 Le script d'entraînement principal est dans [src/modeling/train.py](src/modeling/train.py).
 
@@ -98,7 +98,7 @@ python -m src.modeling.train
 python -m src.modeling.train --mlflow-experiment multimodal-classification --mlflow-tracking-uri ./mlruns
 ```
 
-## API Contract
+## Contrat API
 
 Implémentation: [src/api/main.py](src/api/main.py)
 
@@ -116,9 +116,9 @@ Swagger local:
 http://127.0.0.1:8000/docs
 ```
 
-## Observability Stack
+## Stack De Supervision
 
-La stack d'observabilité combine métriques techniques, métriques API et journaux structurés.
+La stack de supervision combine métriques techniques, métriques API et journaux structurés.
 
 | Source | Type | Emplacement |
 |---|---|---|
@@ -136,7 +136,7 @@ Accès locaux:
 | Grafana | http://127.0.0.1:3000 |
 | MLflow UI | http://127.0.0.1:5000 |
 
-## CI/CD Pipeline
+## Pipeline CI/CD
 
 Workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
@@ -148,22 +148,22 @@ Workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 | docker_publish | push GHCR sur main |
 | deploy | webhook conditionnel |
 
-## Quickstart
+## Démarrage Rapide
 
-### 1) Setup Python
+### 1) Préparer Python
 
 ```bash
 uv venv --python 3.12
 uv pip install -r requirements.txt
 ```
 
-### 2) Train
+### 2) Entraîner le modèle
 
 ```bash
 python -m src.modeling.train
 ```
 
-### 3) Run API
+### 3) Lancer l'API
 
 ```bash
 uvicorn src.api.main:app --reload
@@ -175,17 +175,17 @@ Sous Windows:
 .venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
 ```
 
-### 4) Full stack (API + Prometheus + Grafana)
+### 4) Lancer la stack complète (API + Prometheus + Grafana)
 
 ```bash
 docker compose up -d --build
 ```
 
-## UI And Screenshots
+## UI Et Captures D'Écran
 
 Répertoire UI: [app/ui](app/ui)
 
-Répertoire screenshots: [reports/figures](reports/figures)
+Répertoire des captures: [reports/figures](reports/figures)
 
 Checklist portfolio visuel:
 
@@ -203,7 +203,7 @@ Format recommandé des captures:
 - nommage clair (ex: grafana-overview.png)
 - une capture par composant clé
 
-## Repository Structure
+## Structure Du Dépôt
 
 | Dossier | Rôle |
 |---|---|
@@ -214,7 +214,7 @@ Format recommandé des captures:
 | [reports](reports) | figures, métriques, journal, soutenance |
 | [docs](docs) | runbooks, gouvernance, architecture |
 
-## Certification Deliverables
+## Livrables Certification
 
 | Livrable | Emplacement |
 |---|---|
@@ -223,7 +223,7 @@ Format recommandé des captures:
 | Decision log | [docs/runbooks/decision-log.md](docs/runbooks/decision-log.md) |
 | Plan soutenance | [reports/soutenance/presentation-plan.md](reports/soutenance/presentation-plan.md) |
 
-## Next Portfolio Upgrades
+## Prochaines Améliorations Portfolio
 
 1. Ajouter les captures UI/API/monitoring dans [reports/figures](reports/figures).
 2. Ajouter une section Benchmarks avec tableaux chiffrés consolidés.

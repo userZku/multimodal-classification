@@ -89,3 +89,38 @@ Mesures minimales recommandées avant exposition externe:
 2. Ajouter un modèle de déploiement avec registre et versioning promu.
 3. Introduire authn/authz et observabilité sécurité.
 4. Industrialiser tests d'intégration API + UI en CI.
+
+## 9. Cartographie SI cible (intégration métier)
+
+### 9.1 Flux de données
+1. **Application guichet conseiller** envoie un POST `/predict` au service IA avec les données de saisie.
+2. **Service IA** renvoie la prédiction, la confiance et un `request_id` de traçabilité.
+3. **Référentiel national des usagers** (base transactionnelle) conserve les données métier et l'historique de suivi administratif.
+4. **Service IA** journalise les entrées/sorties d'inférence (logs JSONL) pour audit technique.
+5. **Boucle de correction**: les retours métier alimentent le POST `/retrain` pour relancer un entraînement monitoré.
+
+### 9.2 Frontières de responsabilité
+- Guichet: saisie, restitution et décision humaine finale.
+- Service IA: calcul de score, versionnement modèle, observabilité technique.
+- Référentiel national: conservation officielle et cycle de vie des dossiers usagers.
+
+## 10. Performance, hébergement et dimensionnement
+
+### 10.1 Cibles de service
+- Latence cible en entretien: **p95 < 300 ms** sur `/predict`.
+- Seuil d'alerte dégradé: **p95 > 500 ms**.
+- Disponibilité cible service API: **>= 99,5 %** en heures ouvrées.
+
+### 10.2 Dimensionnement initial (ordre de grandeur)
+
+| Environnement | CPU | RAM | Usage |
+|---|---:|---:|---|
+| Démo / soutenance | 2 vCPU | 4 Go | charge faible, utilisateur unique |
+| Pré-production | 4 vCPU | 8 Go | tests charge modérée + monitoring |
+| Production initiale | 4 à 8 vCPU | 16 Go | usage multi-conseillers, marge de pics |
+
+### 10.3 Choix d'hébergement à arbitrer
+- **On-premise**: contrôle maximal des données publiques, intégration SI facilitée, exploitation plus lourde.
+- **Cloud souverain**: élasticité et time-to-market plus rapide, à condition d'encadrer strictement conformité et contractualisation.
+
+Décision recommandée pour le contexte certif: partir sur une cible **on-premise ou cloud souverain** avec chiffrement, IAM et supervision centralisée.

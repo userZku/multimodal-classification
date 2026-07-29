@@ -18,14 +18,6 @@ from prometheus_client import (
     generate_latest,
 )
 
-try:
-    from xgboost.core import XGBoostError
-except ImportError:
-
-    class XGBoostError(Exception):
-        """Fallback error type when xgboost is not importable."""
-
-
 from src.config import (
     ABSTENTION_THRESHOLD,
     BEST_MODEL_METADATA_PATH,
@@ -61,7 +53,6 @@ def load_artifacts() -> tuple[object | None, dict]:
             ImportError,
             AttributeError,
             OSError,
-            XGBoostError,
         ) as exc:
             # API must stay up even if local model artifact cannot be deserialized.
             logging.getLogger("api.predict").warning(

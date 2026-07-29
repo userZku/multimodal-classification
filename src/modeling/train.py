@@ -27,7 +27,11 @@ from src.config import (
     TARGET_COL,
     TEXT_FEATURE,
 )
-from src.features.preprocessing import build_model_frame, build_preprocessor, resolve_feature_spec
+from src.features.preprocessing import (
+    build_model_frame,
+    build_preprocessor,
+    resolve_feature_spec,
+)
 
 
 def load_training_data(csv_path: str | None = None) -> pd.DataFrame:
@@ -62,10 +66,12 @@ def build_training_pipeline(feature_columns: list[str]) -> Pipeline:
         n_jobs=-1,
     )
 
-    return Pipeline([
-        ("prep", preprocessor),
-        ("clf", classifier),
-    ])
+    return Pipeline(
+        [
+            ("prep", preprocessor),
+            ("clf", classifier),
+        ]
+    )
 
 
 def _setup_mlflow(tracking_uri: str | None = None, experiment_name: str | None = None):
@@ -147,10 +153,16 @@ def train_and_save_model(
 
     # Scenario S1: toutes les features modele (numeriques + categorielles + texte)
     num_feats = [c for c in NUMERIC_FEATURES if c in X_train.columns]
-    cat_feats = [c for c in CATEGORICAL_FEATURES if c in X_train.columns and c != TEXT_FEATURE]
-    unknown_features = sorted(set(X_train.columns) - set(num_feats) - set(cat_feats) - {TEXT_FEATURE})
+    cat_feats = [
+        c for c in CATEGORICAL_FEATURES if c in X_train.columns and c != TEXT_FEATURE
+    ]
+    unknown_features = sorted(
+        set(X_train.columns) - set(num_feats) - set(cat_feats) - {TEXT_FEATURE}
+    )
     if unknown_features:
-        raise ValueError(f"Features non mappees pour S1_multimodal_complet: {unknown_features}")
+        raise ValueError(
+            f"Features non mappees pour S1_multimodal_complet: {unknown_features}"
+        )
 
     pipeline = build_training_pipeline(X_train.columns.tolist())
     pipeline.fit(X_train, y_train)
@@ -163,7 +175,13 @@ def train_and_save_model(
         "accuracy": float(accuracy_score(y_test, y_pred)),
         "f1_macro": float(f1_score(y_test, y_pred, average="macro")),
         "recall_class_2": float(
-            recall_score(y_test, y_pred, labels=[CRITICAL_CLASS], average="macro", zero_division=0)
+            recall_score(
+                y_test,
+                y_pred,
+                labels=[CRITICAL_CLASS],
+                average="macro",
+                zero_division=0,
+            )
         ),
         "critical_2_to_0": critical_errors,
         "test_size": int(len(y_test)),
@@ -203,8 +221,15 @@ def train_and_save_model(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train and serialize model artifacts from the project dataset")
-    parser.add_argument("--csv-path", dest="csv_path", default=None, help="Optional path to a custom training CSV")
+    parser = argparse.ArgumentParser(
+        description="Train and serialize model artifacts from the project dataset"
+    )
+    parser.add_argument(
+        "--csv-path",
+        dest="csv_path",
+        default=None,
+        help="Optional path to a custom training CSV",
+    )
     parser.add_argument(
         "--mlflow-tracking-uri",
         dest="mlflow_tracking_uri",

@@ -9,9 +9,21 @@ from uuid import uuid4
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
 
-from src.config import ABSTENTION_THRESHOLD, BEST_MODEL_METADATA_PATH, BEST_MODEL_PATH, MLFLOW_DIR, PROJECT_ROOT
+from src.config import (
+    ABSTENTION_THRESHOLD,
+    BEST_MODEL_METADATA_PATH,
+    BEST_MODEL_PATH,
+    MLFLOW_DIR,
+    PROJECT_ROOT,
+)
 from src.features.preprocessing import build_model_frame
 from src.modeling.train import train_and_save_model
 from src.api.schemas import (
@@ -54,16 +66,30 @@ def model_version() -> str:
         return f"xgb-s1-{trained_at}"
     return "unavailable"
 
+
 PREDICT_COUNTER = Counter("api_predict_total", "Number of predict requests", ["status"])
-PREDICT_LATENCY = Histogram("api_predict_latency_seconds", "Latency of predict endpoint")
+PREDICT_LATENCY = Histogram(
+    "api_predict_latency_seconds", "Latency of predict endpoint"
+)
 TRAIN_COUNTER = Counter("api_train_total", "Number of train requests", ["status"])
 TRAIN_LATENCY = Histogram("api_train_latency_seconds", "Latency of train endpoint")
 
-JSONL_PREDICT_EVENTS = Gauge("api_jsonl_predict_events_total", "Number of prediction events found in JSONL logs")
-JSONL_TRAIN_EVENTS = Gauge("api_jsonl_train_events_total", "Number of train events found in JSONL logs")
-JSONL_TRAIN_ERRORS = Gauge("api_jsonl_train_error_events_total", "Number of failed train events found in JSONL logs")
-MLFLOW_EXPERIMENTS = Gauge("api_mlflow_experiments_total", "Number of MLflow experiments found in local store")
-MLFLOW_RUNS = Gauge("api_mlflow_runs_total", "Number of MLflow runs found in local store")
+JSONL_PREDICT_EVENTS = Gauge(
+    "api_jsonl_predict_events_total", "Number of prediction events found in JSONL logs"
+)
+JSONL_TRAIN_EVENTS = Gauge(
+    "api_jsonl_train_events_total", "Number of train events found in JSONL logs"
+)
+JSONL_TRAIN_ERRORS = Gauge(
+    "api_jsonl_train_error_events_total",
+    "Number of failed train events found in JSONL logs",
+)
+MLFLOW_EXPERIMENTS = Gauge(
+    "api_mlflow_experiments_total", "Number of MLflow experiments found in local store"
+)
+MLFLOW_RUNS = Gauge(
+    "api_mlflow_runs_total", "Number of MLflow runs found in local store"
+)
 
 LOG_DIR = PROJECT_ROOT / "logs" / "inference"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -170,7 +196,9 @@ def metrics() -> Response:
 def predict(payload: PredictRequest) -> PredictResponse:
     if PIPELINE is None:
         PREDICT_COUNTER.labels(status="model_not_ready").inc()
-        raise HTTPException(status_code=503, detail="Model artifact not found. Train model first.")
+        raise HTTPException(
+            status_code=503, detail="Model artifact not found. Train model first."
+        )
 
     request_id = f"req_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}"
     payload_dict = payload.model_dump()
@@ -188,7 +216,9 @@ def predict(payload: PredictRequest) -> PredictResponse:
             PREDICT_COUNTER.labels(status=status).inc()
         except Exception as exc:  # defensive path for runtime errors
             PREDICT_COUNTER.labels(status="error").inc()
-            raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc
+            raise HTTPException(
+                status_code=500, detail=f"Prediction failed: {exc}"
+            ) from exc
 
     log_event = {
         "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
@@ -241,7 +271,9 @@ def retrain(payload: TrainRequest) -> TrainResponse:
                     ensure_ascii=False,
                 )
             )
-            raise HTTPException(status_code=500, detail=f"Training failed: {exc}") from exc
+            raise HTTPException(
+                status_code=500, detail=f"Training failed: {exc}"
+            ) from exc
 
     train_logger.info(
         json.dumps(

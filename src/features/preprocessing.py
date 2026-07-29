@@ -46,7 +46,9 @@ def infer_departement_from_insee(code_insee_commune: pd.Series) -> pd.Series:
 def apply_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     if "departement_insee" not in out.columns and "code_insee_commune" in out.columns:
-        out["departement_insee"] = infer_departement_from_insee(out["code_insee_commune"])
+        out["departement_insee"] = infer_departement_from_insee(
+            out["code_insee_commune"]
+        )
     return out
 
 

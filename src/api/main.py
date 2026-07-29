@@ -233,7 +233,7 @@ def predict(payload: PredictRequest) -> PredictResponse:
             RuntimeError,
         ) as exc:
             PREDICT_COUNTER.labels(status="error").inc()
-            logger.exception("Prediction failed for request %s: %s", request_id, exc)
+            logger.exception("Prediction failed for request %s", request_id)
             raise HTTPException(
                 status_code=500, detail=f"Prediction failed: {exc}"
             ) from exc
@@ -290,7 +290,7 @@ def retrain(payload: TrainRequest) -> TrainResponse:
                 )
             )
             logging.getLogger("api.train").exception(
-                "Training failed for event %s: %s", event_id, exc
+                "Training failed for event %s", event_id
             )
             raise HTTPException(
                 status_code=500, detail=f"Training failed: {exc}"

@@ -3,14 +3,15 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
-from src.config import ABSTENTION_THRESHOLD, BEST_MODEL_METADATA_PATH, BEST_MODEL_PATH, PROJECT_ROOT
+from src.config import ABSTENTION_THRESHOLD, BEST_MODEL_METADATA_PATH, BEST_MODEL_PATH, MLFLOW_DIR, PROJECT_ROOT
 from src.features.preprocessing import build_model_frame
 from src.modeling.train import train_and_save_model
 from src.api.schemas import (
@@ -58,6 +59,12 @@ PREDICT_LATENCY = Histogram("api_predict_latency_seconds", "Latency of predict e
 TRAIN_COUNTER = Counter("api_train_total", "Number of train requests", ["status"])
 TRAIN_LATENCY = Histogram("api_train_latency_seconds", "Latency of train endpoint")
 
+JSONL_PREDICT_EVENTS = Gauge("api_jsonl_predict_events_total", "Number of prediction events found in JSONL logs")
+JSONL_TRAIN_EVENTS = Gauge("api_jsonl_train_events_total", "Number of train events found in JSONL logs")
+JSONL_TRAIN_ERRORS = Gauge("api_jsonl_train_error_events_total", "Number of failed train events found in JSONL logs")
+MLFLOW_EXPERIMENTS = Gauge("api_mlflow_experiments_total", "Number of MLflow experiments found in local store")
+MLFLOW_RUNS = Gauge("api_mlflow_runs_total", "Number of MLflow runs found in local store")
+
 LOG_DIR = PROJECT_ROOT / "logs" / "inference"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 PREDICT_LOG_PATH = LOG_DIR / "api_predict_requests.jsonl"
@@ -83,6 +90,67 @@ def reload_artifacts() -> None:
     PIPELINE, METADATA = load_artifacts()
 
 
+def _count_file_lines(file_path: Path) -> int:
+    if not file_path.exists():
+        return 0
+    with file_path.open("r", encoding="utf-8") as handle:
+        return sum(1 for _ in handle)
+
+
+def _count_train_error_events(file_path: Path) -> int:
+    if not file_path.exists():
+        return 0
+
+    errors = 0
+    with file_path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("status") == "error":
+                errors += 1
+    return errors
+
+
+def _scan_mlflow_store(mlflow_root: Path) -> tuple[int, int]:
+    if not mlflow_root.exists():
+        return 0, 0
+
+    experiment_dirs = [
+        path
+        for path in mlflow_root.iterdir()
+        if path.is_dir() and path.name not in {".trash", "models"}
+    ]
+
+    experiments = 0
+    runs = 0
+    for exp_dir in experiment_dirs:
+        if not (exp_dir / "meta.yaml").exists():
+            continue
+        experiments += 1
+        runs += sum(
+            1
+            for candidate in exp_dir.iterdir()
+            if candidate.is_dir() and (candidate / "meta.yaml").exists()
+        )
+
+    return experiments, runs
+
+
+def _refresh_derived_metrics() -> None:
+    JSONL_PREDICT_EVENTS.set(float(_count_file_lines(PREDICT_LOG_PATH)))
+    JSONL_TRAIN_EVENTS.set(float(_count_file_lines(TRAIN_LOG_PATH)))
+    JSONL_TRAIN_ERRORS.set(float(_count_train_error_events(TRAIN_LOG_PATH)))
+
+    exp_count, run_count = _scan_mlflow_store(MLFLOW_DIR)
+    MLFLOW_EXPERIMENTS.set(float(exp_count))
+    MLFLOW_RUNS.set(float(run_count))
+
+
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(
@@ -94,6 +162,7 @@ def health() -> HealthResponse:
 
 @app.get("/metrics")
 def metrics() -> Response:
+    _refresh_derived_metrics()
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 

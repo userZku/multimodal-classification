@@ -60,10 +60,47 @@ jobs:
       - name: Validate notebook presence
         run: test -f notebooks/multimodal-classification.ipynb
 
+  training_smoke:
+    name: Train Smoke
+    runs-on: ubuntu-latest
+    needs: [quality]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run training smoke
+        env:
+          MLFLOW_ALLOW_FILE_STORE: "true"
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from src.modeling.train import train_and_save_model
+
+          has_csv = bool(list(Path("data/raw").glob("*.csv")) or list(Path("data").glob("*.csv")))
+          if not has_csv:
+              raise SystemExit("No CSV dataset found in data/raw or data")
+
+          metadata = train_and_save_model()
+          print("train smoke ok:", metadata.get("model_name"), metadata.get("scenario"))
+          PY
+
   docker_build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [prepare, quality]
+    needs: [prepare, quality, training_smoke]
 
     steps:
       - name: Checkout

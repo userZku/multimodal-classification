@@ -26,6 +26,10 @@ const resultEmpty = document.getElementById("result-empty");
 const resultCard = document.getElementById("result-card");
 const errorBox = document.getElementById("error-box");
 
+function normalizeRomeCode(value) {
+  return (value || "").trim().toUpperCase();
+}
+
 function hydrateForm(values) {
   Object.entries(values).forEach(([key, value]) => {
     const field = form.elements.namedItem(key);
@@ -86,12 +90,14 @@ function showResult(data) {
 
 function serializePayload() {
   const formData = new FormData(form);
+  const romeCode = normalizeRomeCode(formData.get("code_rome_vise")) || null;
+
   return {
     usager_id: formData.get("usager_id") || null,
     age: Number(formData.get("age")),
     niveau_diplome: formData.get("niveau_diplome") || null,
     anciennete_poste_ans: Number(formData.get("anciennete_poste_ans")),
-    code_rome_vise: formData.get("code_rome_vise") || null,
+    code_rome_vise: romeCode,
     departement_insee: formData.get("departement_insee") || null,
     est_allocataire: Number(formData.get("est_allocataire")),
     nationalite_hors_ue: Number(formData.get("nationalite_hors_ue")),

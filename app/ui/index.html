@@ -44,14 +44,14 @@
               <dd id="model-version">-</dd>
             </div>
           </dl>
-          <details class="tools-disclosure">
-            <summary>Outils avancés</summary>
+          <div class="tools-disclosure" aria-label="Outils avancés">
+            <span class="tools-label">Outils avancés</span>
             <div class="quick-links">
               <a href="http://127.0.0.1:9090" target="_blank" rel="noreferrer">Prometheus</a>
               <a href="http://127.0.0.1:3000" target="_blank" rel="noreferrer">Grafana</a>
               <a href="http://127.0.0.1:5000" target="_blank" rel="noreferrer">MLflow</a>
             </div>
-          </details>
+          </div>
         </aside>
       </header>
 
@@ -66,7 +66,7 @@
             <div class="field-grid">
               <label>
                 <span>Usager ID</span>
-                <input name="usager_id" type="text" placeholder="U_TEST_001" />
+                <input name="usager_id" type="text" placeholder="Ex. U_TEST_001" />
                 <small class="field-help">Champ optionnel de suivi, exclu des features du modèle.</small>
               </label>
               <label>
@@ -91,22 +91,8 @@
               </label>
               <label>
                 <span>Code ROME vise</span>
-                <input name="code_rome_vise" type="text" value="M1602" list="rome-options" />
-                <datalist id="rome-options">
-                  <option value="H1206"></option>
-                  <option value="G1801"></option>
-                  <option value="D1210"></option>
-                  <option value="G1601"></option>
-                  <option value="K1403"></option>
-                  <option value="I1304"></option>
-                  <option value="M1602"></option>
-                  <option value="H2502"></option>
-                  <option value="A1203"></option>
-                  <option value="K1304"></option>
-                  <option value="M1203"></option>
-                  <option value="N4301"></option>
-                </datalist>
-                <small class="field-help">Suggestions issues des codes ROME les plus fréquents dans le dataset.</small>
+                <input name="code_rome_vise" type="text" value="M1602" placeholder="Ex. M1602" />
+                <small class="field-help">Saisis directement le code ROME visé.</small>
               </label>
               <label>
                 <span>Departement INSEE</span>

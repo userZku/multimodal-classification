@@ -1,252 +1,230 @@
-# Prédiction du délai de retour à l'emploi
+# Multimodal Classification Portfolio
 
-J'ai développé une solution IA multimodale pour prédire le délai de retour à l'emploi à partir de données tabulaires et textuelles.
+![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/fastapi-API-009688?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)
+![MLflow](https://img.shields.io/badge/mlflow-tracking-0194E2?logo=mlflow&logoColor=white)
+![Prometheus](https://img.shields.io/badge/prometheus-metrics-E6522C?logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/grafana-dashboard-F46800?logo=grafana&logoColor=white)
 
-L'objectif de ce dépôt est simple : montrer un projet de bout en bout, depuis la modélisation jusqu'à l'industrialisation (API, qualité, conteneurisation et déploiement).
+## Executive Summary
 
-## Vue rapide
+Ce projet montre un cycle ML complet, de la modélisation au monitoring de service, sur un cas d'usage de classification multiclasse du délai de retour à l'emploi.
 
-- Problème : classification multiclasse du délai de retour à l'emploi.
-- Données : variables structurées + texte d'entretien.
-- Stack : Python, scikit-learn, XGBoost/LightGBM, FastAPI, Pytest, GitHub Actions.
-- Cible : passer d'un notebook de recherche à une application ML testée, documentée et déployable.
+Points forts:
 
-## Architecture
+| Axe | Ce qui est en place |
+|---|---|
+| Modeling | Pipeline tabulaire + texte, scénario S1 XGBoost, entraînement scriptable |
+| Serving | API FastAPI avec endpoints health, predict, retrain, metrics |
+| Observability | Prometheus + Grafana, logs JSONL, métriques applicatives |
+| Tracking | Runs MLflow (paramètres, métriques, artifacts, run metadata) |
+| Delivery | Workflow GitHub Actions CI/CD, build Docker, publication image GHCR |
+
+## Portfolio Table Of Contents
+
+1. [Business Problem](#business-problem)
+2. [System Architecture](#system-architecture)
+3. [Modeling Strategy](#modeling-strategy)
+4. [API Contract](#api-contract)
+5. [Observability Stack](#observability-stack)
+6. [CI/CD Pipeline](#cicd-pipeline)
+7. [Quickstart](#quickstart)
+8. [UI And Screenshots](#ui-and-screenshots)
+9. [Repository Structure](#repository-structure)
+10. [Certification Deliverables](#certification-deliverables)
+
+## Business Problem
+
+Objectif: prédire le délai de retour à l'emploi en 3 classes à partir de données socio-professionnelles et de verbatims d'entretien.
+
+Contraintes métier:
+
+| Critère | Importance |
+|---|---|
+| F1 macro | Qualité globale multiclasse |
+| Recall classe critique | Réduction des faux négatifs à impact fort |
+| Erreurs critiques 2 -> 0 | Indicateur métier prioritaire |
+
+Références métier et décisions:
+
+- [docs/runbooks/decision-log.md](docs/runbooks/decision-log.md)
+- [reports/journal/journal-de-bord.ipynb](reports/journal/journal-de-bord.ipynb)
+
+## System Architecture
 
 ```mermaid
 flowchart LR
-   A[data/raw CSV] --> B[Preprocessing tabulaire + texte]
-   B --> C[Entraînement + évaluation]
-   C --> D[Artefacts modèles + vectorizers]
-   D --> E[API FastAPI]
-   E --> F[Conteneur Docker]
-   F --> G[Déploiement]
-   E --> H[Monitoring: health, logs, métriques]
+   A[Raw CSV Dataset] --> B[Feature Engineering]
+   B --> C[Train Script src/modeling/train.py]
+   C --> D[Model Artifacts models/best_model]
+   C --> E[MLflow Runs mlruns]
+   D --> F[FastAPI Inference Service]
+   F --> G[Prometheus Scrape /metrics]
+   G --> H[Grafana Dashboards]
+   F --> I[JSONL Logs]
 ```
 
-## Modèle
+```mermaid
+flowchart TD
+   PR[Pull Request] --> Q[Quality Job]
+   Q --> B[Docker Build]
+   B --> P[Publish GHCR]
+   P --> D[Deploy Webhook Optional]
+```
 
-- Tâche : classification à 3 classes.
-- Approche : comparaison de scénarios tabulaire seul vs multimodal tabulaire + texte.
-- Familles de modèles explorées : baseline scikit-learn + candidats tree-based (XGBoost, LightGBM).
-- Priorité métier : réduire les erreurs critiques sur la classe la plus risquée.
+Infrastructure files:
 
-Référence de travail : notebooks/multimodal-classification.ipynb
+- [docker-compose.yml](docker-compose.yml)
+- [infra/docker/Dockerfile](infra/docker/Dockerfile)
+- [infra/compose/prometheus/prometheus.yml](infra/compose/prometheus/prometheus.yml)
+- [infra/compose/grafana/provisioning/dashboards/json/multimodal-api-overview.json](infra/compose/grafana/provisioning/dashboards/json/multimodal-api-overview.json)
 
-## Résultats et métriques
+## Modeling Strategy
 
-Le projet suit aujourd'hui :
+Le script d'entraînement principal est dans [src/modeling/train.py](src/modeling/train.py).
 
-- F1 macro pour la qualité globale multiclasse.
-- Recall de la classe critique pour l'alignement métier.
-- Matrice de confusion pour analyser les erreurs à fort impact.
+| Élément | Détail |
+|---|---|
+| Modèle final | XGBoost (S1 multimodal complet) |
+| Features | numériques + catégorielles + texte |
+| Persistance | joblib + metadata JSON |
+| Tracking | MLflow local |
 
-Seuils cibles définis dans le notebook :
-
-- F1 macro >= 0.70
-- Recall classe critique >= 0.80
-
-Publication portfolio prévue :
-
-- Tableau comparatif final des modèles dans reports/metrics/
-- Figure de matrice de confusion dans reports/figures/
-- Synthèse des arbitrages dans docs/runbooks/decision-log.md
-
-## API
-
-Statut : implémentation de base opérationnelle (FastAPI).
-
-Surface cible :
-
-- GET /health : vérifier la disponibilité du service
-- POST /predict : inférer la classe de délai de retour à l'emploi
-- POST /retrain (alias POST /train) : réentraîner le modèle et recharger les artefacts
-- GET /metrics : exposer des indicateurs techniques
-
-Mode d'exploitation actuel :
-
-- API minimale de mise à disposition d'un modèle déjà entraîné.
-- Le réentraînement peut être déclenché via l'API (`/retrain` ou `/train`) ou hors API (pipeline/notebook).
-- Les inférences sont journalisées dans `logs/inference/api_predict_requests.jsonl`.
-- Les événements d'entraînement sont journalisés dans `logs/inference/api_train_events.jsonl`.
-- Les runs d'entraînement sont tracés avec MLflow (paramètres, métriques, artefacts modèle).
-
-Objectif portfolio : documentation Swagger exploitable, avec des exemples de requêtes et de réponses.
-
-Lancement local :
-
-1) Entraîner le modèle (si nécessaire) :
+Commandes utiles:
 
 ```bash
 python -m src.modeling.train
+python -m src.modeling.train --mlflow-experiment multimodal-classification --mlflow-tracking-uri ./mlruns
 ```
 
-2) Démarrer l'API :
+## API Contract
 
-```bash
-uvicorn src.api.main:app --reload
-```
+Implémentation: [src/api/main.py](src/api/main.py)
 
-Sous Windows avec le venv du projet :
+| Endpoint | Rôle | Retour |
+|---|---|---|
+| GET /health | état de service | statut + version modèle |
+| POST /predict | inférence unitaire | classe, confiance, statut |
+| POST /retrain | réentraînement | event_id, version, métriques |
+| POST /train | alias de /retrain | idem |
+| GET /metrics | exposition Prometheus | métriques process + applicatives |
 
-```bash
-.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
-```
-
-3) Tester rapidement :
-
-```bash
-curl http://127.0.0.1:8000/health
-```
-
-```bash
-curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{"usager_id":"U_TEST_001","age":36,"niveau_diplome":"bac+2","anciennete_poste_ans":4.0,"code_rome_vise":"M1805","code_insee_commune":"75101","est_allocataire":1,"nationalite_hors_ue":0,"departement_insee":"75","synthese_entretien":"Motivation stable, projet coherent, recherche active."}'
-```
-
-Swagger UI :
+Swagger local:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-### Brancher Prometheus et Grafana en local
+## Observability Stack
 
-Option A - Stack Docker complete (API + Prometheus + Grafana) :
+La stack d'observabilité combine métriques techniques, métriques API et journaux structurés.
 
-1) Construire et démarrer la stack :
+| Source | Type | Emplacement |
+|---|---|---|
+| FastAPI /metrics | Prometheus exposition | [src/api/main.py](src/api/main.py) |
+| Logs inférence | JSONL | [logs/inference](logs/inference) |
+| Logs entraînement | JSONL | [logs/inference](logs/inference) |
+| Dashboard Grafana | provisionné | [infra/compose/grafana/provisioning](infra/compose/grafana/provisioning) |
 
-```bash
-docker compose up -d --build
-```
+Accès locaux:
 
-2) Ouvrir les interfaces :
+| Outil | URL |
+|---|---|
+| API Docs | http://127.0.0.1:8000/docs |
+| Prometheus | http://127.0.0.1:9090 |
+| Grafana | http://127.0.0.1:3000 |
+| MLflow UI | http://127.0.0.1:5000 |
 
-```text
-API docs: http://127.0.0.1:8000/docs
-Prometheus: http://127.0.0.1:9090
-Grafana: http://127.0.0.1:3000
-```
+## CI/CD Pipeline
 
-Connexion Grafana (par défaut) :
+Workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
-- login: `admin`
-- mot de passe: `admin`
+| Job | But |
+|---|---|
+| prepare | normaliser le nom d'image en minuscules |
+| quality | tests + lint informatif |
+| docker_build | build image API |
+| docker_publish | push GHCR sur main |
+| deploy | webhook conditionnel |
 
-La datasource Prometheus est provisionnée automatiquement.
-Un dashboard est aussi provisionné automatiquement : `Multimodal API > Multimodal API Overview`.
+## Quickstart
 
-3) Vérifier la cible :
-
-- Dans `Status > Targets`, le job `multimodal-api` doit être `UP`.
-
-La configuration de scrape est dans `infra/compose/prometheus/prometheus.yml`.
-
-## Docker et déploiement
-
-Statut : structure prête, finalisation en cours.
-
-- Dossiers cibles : infra/docker/, infra/compose/, infra/deployment/
-- Étape suivante : exécution locale en une commande puis déploiement cloud (Render, Azure, Railway ou VM)
-
-## Captures d'écran à inclure
-
-Pour rendre la valeur visible en 30 secondes pour un recruteur :
-
-- Swagger UI de l'API
-- Exemple de réponse POST /predict
-- Pipeline CI GitHub Actions au vert
-- Écran du service déployé
-
-Emplacement recommandé : reports/figures/
-
-## État actuel
-
-- Notebook principal de modélisation disponible
-- Environnement Python 3.12 et dépendances ML/API préconfigurées
-- CI GitHub Actions présente
-- Documentation de gouvernance déjà structurée
-
-### Avancement du projet
-
-- [x] Structuration projet (data, src, tests, infra, docs, reports)
-- [x] Base CI sur GitHub Actions
-- [x] Gouvernance (decision log, conventions)
-- [x] Extraction du socle preprocessing/training/inference vers src/
-- [x] API FastAPI de base opérationnelle
-- [ ] Tests exécutés en CI
-- [ ] Docker / Docker Compose finalisés
-- [ ] Déploiement cible
-
-## Installation locale
-
-Prérequis : Python 3.12
+### 1) Setup Python
 
 ```bash
 uv venv --python 3.12
 uv pip install -r requirements.txt
 ```
 
-## Entrainement hors notebook
-
-Module Python pour entrainer directement le modele final XGBoost du scenario S1 (multimodal complet) et sauvegarder les artefacts:
+### 2) Train
 
 ```bash
 python -m src.modeling.train
 ```
 
-Avec options MLflow:
+### 3) Run API
 
 ```bash
-python -m src.modeling.train --mlflow-experiment multimodal-classification --mlflow-tracking-uri ./mlruns
+uvicorn src.api.main:app --reload
 ```
 
-Interface MLflow locale:
+Sous Windows:
 
 ```bash
-mlflow ui --backend-store-uri ./mlruns --port 5000
+.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
 ```
 
-Puis ouvrir:
-
-```text
-http://127.0.0.1:5000
-```
-
-Avec un CSV explicite:
+### 4) Full stack (API + Prometheus + Grafana)
 
 ```bash
-python -m src.modeling.train --csv-path data/raw/mon_dataset.csv
+docker compose up -d --build
 ```
 
-## Structure du dépôt
+## UI And Screenshots
 
-- brief/: sujet et consignes
-- data/: données brutes, intermédiaires et préparées
-- src/: modules Python (data, features, modeling, evaluation, api, monitoring, utils)
-- models/: artefacts modèles et vectorizers
-- tests/: tests unitaires, intégration, API
-- infra/: conteneurisation et déploiement
-- docs/: architecture, model cards, RGPD/éthique, runbooks
-- reports/: journal, métriques, soutenance
-- .github/workflows/: CI
+Répertoire UI: [app/ui](app/ui)
 
-## Livrables certification conservés
+Répertoire screenshots: [reports/figures](reports/figures)
 
-Le projet conserve les livrables attendus pour la certification CISIA :
+Checklist portfolio visuel:
 
-- Notebook final : notebooks/multimodal-classification.ipynb
-- Support de soutenance : reports/soutenance/presentation-plan.md
-- Journal de bord : reports/journal/journal-de-bord.ipynb
-- Journal de décisions : docs/runbooks/decision-log.md
+| Capture | Statut |
+|---|---|
+| Swagger endpoint /predict | A ajouter |
+| Grafana dashboard overview | A ajouter |
+| Prometheus target up | A ajouter |
+| MLflow runs page | A ajouter |
+| CI GitHub Actions success | A ajouter |
 
-## Roadmap portfolio
+Format recommandé des captures:
 
-1. Industrialiser le pipeline d'entraînement dans src/ (fit, evaluation, serialization).
-2. Exposer le modèle via FastAPI (predict, health, metrics).
-3. Ajouter tests Pytest (payload, inference, regression métriques).
-4. Dockeriser l'API et documenter un run local one-command.
-5. Publier résultats, captures et démo déployée.
+- 1600x900 minimum
+- nommage clair (ex: grafana-overview.png)
+- une capture par composant clé
 
-## Note
+## Repository Structure
 
-Certains dossiers contiennent encore des .gitkeep : ils représentent des zones prévues, qui seront remplies au fur et à mesure de la finalisation.
+| Dossier | Rôle |
+|---|---|
+| [src](src) | code data, features, modeling, api |
+| [tests](tests) | tests API et configuration test |
+| [infra](infra) | docker, compose, provisioning observabilité |
+| [models](models) | artefacts modèle |
+| [reports](reports) | figures, métriques, journal, soutenance |
+| [docs](docs) | runbooks, gouvernance, architecture |
+
+## Certification Deliverables
+
+| Livrable | Emplacement |
+|---|---|
+| Notebook principal | [notebooks/multimodal-classification.ipynb](notebooks/multimodal-classification.ipynb) |
+| Journal de bord | [reports/journal/journal-de-bord.ipynb](reports/journal/journal-de-bord.ipynb) |
+| Decision log | [docs/runbooks/decision-log.md](docs/runbooks/decision-log.md) |
+| Plan soutenance | [reports/soutenance/presentation-plan.md](reports/soutenance/presentation-plan.md) |
+
+## Next Portfolio Upgrades
+
+1. Ajouter les captures UI/API/monitoring dans [reports/figures](reports/figures).
+2. Ajouter une section Benchmarks avec tableaux chiffrés consolidés.
+3. Ajouter une section Demo vidéo courte.

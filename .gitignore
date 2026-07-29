@@ -26,3 +26,6 @@ models/
 
 # MLflow local tracking
 mlruns/
+
+# Scripts
+scripts/

@@ -210,10 +210,11 @@ def ui_home() -> FileResponse:
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
+    loaded = PIPELINE is not None
     return HealthResponse(
         status="ok",
-        model_loaded=PIPELINE is not None,
-        model_version=model_version(),
+        model_loaded=loaded,
+        model_version=model_version() if loaded else "unavailable",
     )
 
 

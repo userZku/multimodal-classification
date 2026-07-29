@@ -185,23 +185,20 @@ docker compose up -d --build
 
 Répertoire UI: [app/ui](app/ui)
 
-Répertoire des captures: [reports/figures](reports/figures)
+### UI - Formulaire de prédiction et historique
+![UI Homepage](reports/figures/ui-homepage.png)
 
-Checklist portfolio visuel:
+### UI - Résultat de prédiction
+![Prediction Result](reports/figures/ui-prediction-result.png)
 
-| Capture | Statut |
-|---|---|
-| Swagger endpoint /predict | A ajouter |
-| Grafana dashboard overview | A ajouter |
-| Prometheus target up | A ajouter |
-| MLflow runs page | A ajouter |
-| CI GitHub Actions success | A ajouter |
+### API - Swagger
+![Swagger](reports/figures/api-swagger.png)
 
-Format recommandé des captures:
+### Monitoring - Prometheus targets
+![Prometheus Targets](reports/figures/prometheus-targets.png)
 
-- 1600x900 minimum
-- nommage clair (ex: grafana-overview.png)
-- une capture par composant clé
+### Monitoring - Grafana Dashboard
+![Grafana Dashboard](reports/figures/grafana-dashboard.png)
 
 ## Structure Du Dépôt
 

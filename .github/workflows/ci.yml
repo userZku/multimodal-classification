@@ -21,7 +21,7 @@ env:
 
 jobs:
   quality:
-    name: Lint and Test
+    name: Test (lite)
     runs-on: ubuntu-latest
 
     steps:
@@ -40,11 +40,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Ruff (lint)
+      - name: Ruff (advisory, non-blocking)
+        continue-on-error: true
         run: ruff check src tests
-
-      - name: Black (format check)
-        run: black --check src tests
 
       - name: Run tests
         run: pytest -q

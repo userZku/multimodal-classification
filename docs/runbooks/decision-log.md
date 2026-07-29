@@ -295,3 +295,15 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : chaque entraînement est historisé, corrélable aux métriques métier et exploitable dans l'UI MLflow ; la metadata du modèle contient désormais les identifiants de run.
 - Risques / limites : backend filesystem MLflow en mode maintenance (nécessite `MLFLOW_ALLOW_FILE_STORE=true`) et absence de workflow de promotion de modèle.
 - Suivi / action : planifier la migration vers un backend SQL (sqlite au minimum), puis définir une politique de sélection/promotion des runs gagnants.
+
+## DEC-022 - Simplifier l'UI de saisie ROME et clarifier le rôle de `usager_id`
+- Date : 2026-07-29
+- Section notebook : 8.2 / 8.8
+- Statut : accepted
+- Contexte : la saisie du code ROME via liste déroulante + logique "autre" dégradait l'UX, et la documentation pouvait laisser penser que `usager_id` entrait dans le modèle.
+- Décision : remplacer la sélection ROME par un champ texte simple (placeholder `Ex. Mxxxxx`) et préciser dans la documentation/API que `usager_id` reste optionnel pour traçabilité mais est exclu des features de prédiction.
+- Alternatives considérées : conserver le menu déroulant avec option "autre", ou supprimer `usager_id` du schéma d'entrée dès maintenant.
+- Justification : réduire la friction en démo, garder un payload API compatible avec la traçabilité, et lever l'ambiguïté fonctionnelle côté jury.
+- Impact : formulaire plus fluide, meilleure lisibilité du contrat API, et cohérence renforcée entre code de préprocessing et documentation section 8.
+- Risques / limites : la validation métier des codes ROME saisis librement reste limitée (pas de référentiel contrôlé en ligne dans cette version).
+- Suivi / action : ajouter ultérieurement une table de correspondance ROME (code/libellé) et un contrôle de validité côté backend si besoin d'usage opérationnel renforcé.

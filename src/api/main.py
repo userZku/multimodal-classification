@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import (
@@ -203,6 +203,24 @@ def _refresh_derived_metrics() -> None:
     MLFLOW_RUNS.set(float(run_count))
 
 
+def _read_jsonl_tail(file_path: Path, limit: int) -> list[dict]:
+    if limit <= 0 or not file_path.exists():
+        return []
+
+    events: list[dict] = []
+    with file_path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    return events[-limit:]
+
+
 @app.get("/", include_in_schema=False)
 def ui_home() -> FileResponse:
     return FileResponse(UI_DIR / "index.html")
@@ -222,6 +240,15 @@ def health() -> HealthResponse:
 def metrics() -> Response:
     _refresh_derived_metrics()
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/history")
+def history(limit: int = Query(default=20, ge=1, le=200)) -> dict:
+    items = _read_jsonl_tail(PREDICT_LOG_PATH, limit=limit)
+    return {
+        "count": len(items),
+        "items": items,
+    }
 
 
 @app.post("/predict", response_model=PredictResponse)

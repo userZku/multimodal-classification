@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -77,3 +79,34 @@ def test_retrain_endpoint_returns_ok_with_mocked_training(monkeypatch) -> None:
     assert data["status"] == "ok"
     assert "event_id" in data
     assert "metrics" in data
+
+
+def test_history_returns_recent_prediction_events(monkeypatch, tmp_path) -> None:
+    history_path = tmp_path / "predict_history.jsonl"
+    events = [
+        {
+            "timestamp_utc": "2026-07-29T10:00:00+00:00",
+            "request_id": "req_001",
+            "output": {"prediction": 1, "confidence": 0.71, "status": "ok"},
+        },
+        {
+            "timestamp_utc": "2026-07-29T10:01:00+00:00",
+            "request_id": "req_002",
+            "output": {
+                "prediction": 2,
+                "confidence": 0.42,
+                "status": "a_revoir",
+            },
+        },
+    ]
+    history_path.write_text(
+        "\n".join(json.dumps(event) for event in events), encoding="utf-8"
+    )
+    monkeypatch.setattr(api_main, "PREDICT_LOG_PATH", history_path)
+
+    response = client.get("/history?limit=1")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert data["items"][0]["request_id"] == "req_002"

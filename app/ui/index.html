@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Classification multimodale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Portfolio ML Ops</p>
+          <h1>Prédire le délai de retour à l'emploi</h1>
+          <p class="hero-text">
+            Interface de démonstration branchée sur l'API FastAPI pour tester une
+            prédiction, vérifier l'état du service et naviguer vers les outils de
+            supervision.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#predict-form">Tester une prédiction</a>
+            <a class="button ghost" href="/docs" target="_blank" rel="noreferrer">Swagger</a>
+          </div>
+        </div>
+
+        <aside class="status-card">
+          <div class="status-head">
+            <span class="status-dot" id="health-dot"></span>
+            <span id="health-label">Vérification du service...</span>
+          </div>
+          <dl class="status-grid">
+            <div>
+              <dt>Modèle chargé</dt>
+              <dd id="model-loaded">-</dd>
+            </div>
+            <div>
+              <dt>Version</dt>
+              <dd id="model-version">-</dd>
+            </div>
+          </dl>
+          <details class="tools-disclosure">
+            <summary>Outils avancés</summary>
+            <div class="quick-links">
+              <a href="http://127.0.0.1:9090" target="_blank" rel="noreferrer">Prometheus</a>
+              <a href="http://127.0.0.1:3000" target="_blank" rel="noreferrer">Grafana</a>
+              <a href="http://127.0.0.1:5000" target="_blank" rel="noreferrer">MLflow</a>
+            </div>
+          </details>
+        </aside>
+      </header>
+
+      <main class="content-grid">
+        <section class="panel form-panel">
+          <div class="panel-head">
+            <p class="panel-kicker">Inférence</p>
+            <h2>Formulaire de prédiction</h2>
+          </div>
+
+          <form id="predict-form" class="predict-form">
+            <div class="field-grid">
+              <label>
+                <span>Usager ID</span>
+                <input name="usager_id" type="text" placeholder="U_TEST_001" />
+                <small class="field-help">Champ optionnel de suivi, exclu des features du modèle.</small>
+              </label>
+              <label>
+                <span>Âge</span>
+                <input name="age" type="number" min="16" max="100" step="1" value="36" />
+                <small class="field-help">Âge utilisé comme variable numérique dans le pipeline.</small>
+              </label>
+              <label>
+                <span>Niveau de diplôme</span>
+                <select name="niveau_diplome">
+                  <option value="Sans diplôme">Sans diplôme</option>
+                  <option value="Bac">Bac</option>
+                  <option value="Bac+2" selected>Bac+2</option>
+                  <option value="Bac+5">Bac+5</option>
+                </select>
+                <small class="field-help">Valeurs alignées sur les modalités observées dans le dataset d'entraînement.</small>
+              </label>
+              <label>
+                <span>Ancienneté poste (ans)</span>
+                <input name="anciennete_poste_ans" type="number" min="0" step="0.1" value="4" />
+                <small class="field-help">Ancienneté déclarée sur le poste ou la trajectoire récente.</small>
+              </label>
+              <label>
+                <span>Code ROME vise</span>
+                <input name="code_rome_vise" type="text" value="M1602" list="rome-options" />
+                <datalist id="rome-options">
+                  <option value="H1206"></option>
+                  <option value="G1801"></option>
+                  <option value="D1210"></option>
+                  <option value="G1601"></option>
+                  <option value="K1403"></option>
+                  <option value="I1304"></option>
+                  <option value="M1602"></option>
+                  <option value="H2502"></option>
+                  <option value="A1203"></option>
+                  <option value="K1304"></option>
+                  <option value="M1203"></option>
+                  <option value="N4301"></option>
+                </datalist>
+                <small class="field-help">Suggestions issues des codes ROME les plus fréquents dans le dataset.</small>
+              </label>
+              <label>
+                <span>Departement INSEE</span>
+                <input name="departement_insee" type="text" value="75" />
+                <small class="field-help">Code départemental conservé comme variable catégorielle.</small>
+              </label>
+              <label>
+                <span>Allocataire</span>
+                <select name="est_allocataire">
+                  <option value="1" selected>Oui</option>
+                  <option value="0">Non</option>
+                </select>
+                <small class="field-help">Valeur binaire utilisée dans le scénario de prédiction.</small>
+              </label>
+              <label>
+                <span>Nationalité hors UE</span>
+                <select name="nationalite_hors_ue">
+                  <option value="0" selected>Non</option>
+                  <option value="1">Oui</option>
+                </select>
+                <small class="field-help">Variable présente dans le scénario S1 retenu.</small>
+              </label>
+            </div>
+
+            <label class="textarea-field">
+              <span>Synthèse entretien</span>
+              <textarea name="synthese_entretien" rows="5">Motivation stable, projet cohérent, recherche active.</textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="button primary" type="submit">Lancer la prédiction</button>
+              <button class="button ghost" type="button" id="fill-example">Recharger exemple</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel result-panel">
+          <div class="panel-head">
+            <p class="panel-kicker">Résultat</p>
+            <h2>Sortie du modèle</h2>
+          </div>
+
+          <div id="result-empty" class="result-empty">
+            Lance une prédiction pour afficher la classe, la confiance et le statut.
+          </div>
+
+          <div id="result-card" class="result-card hidden">
+            <div class="result-badge" id="result-status">-</div>
+            <div class="result-main">
+              <div>
+                <p class="metric-label">Décision du modèle</p>
+                <p class="metric-value" id="result-prediction">-</p>
+              </div>
+              <div>
+                <p class="metric-label">Confiance</p>
+                <p class="metric-value" id="result-confidence">-</p>
+              </div>
+            </div>
+            <dl class="result-meta">
+              <div class="meta-card meta-treatment">
+                <dt>Mode de traitement</dt>
+                <dd id="result-status-label" class="no-wrap">-</dd>
+              </div>
+              <div class="meta-card meta-wide">
+                <dt>Request ID</dt>
+                <dd id="result-request-id" class="break-anywhere">-</dd>
+              </div>
+              <div class="meta-card meta-wide">
+                <dt>Version modèle</dt>
+                <dd id="result-model-version" class="break-anywhere">-</dd>
+              </div>
+            </dl>
+          </div>
+
+          <pre id="error-box" class="error-box hidden"></pre>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/app.js"></script>
+  </body>
+</html>

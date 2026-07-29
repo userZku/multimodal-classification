@@ -8,6 +8,13 @@ import src.api.main as api_main
 client = TestClient(app)
 
 
+def test_root_serves_ui_page() -> None:
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Portfolio ML Ops" in response.text
+
+
 def test_health_endpoint_returns_ok_payload() -> None:
     response = client.get("/health")
     assert response.status_code == 200

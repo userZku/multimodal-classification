@@ -10,6 +10,8 @@ from uuid import uuid4
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
@@ -17,6 +19,14 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+
+try:
+    from xgboost.core import XGBoostError
+except ImportError:
+
+    class XGBoostError(Exception):
+        pass
+
 
 from src.config import (
     ABSTENTION_THRESHOLD,
@@ -41,6 +51,11 @@ app = FastAPI(
     description="Inference API for return-to-employment delay classification.",
 )
 
+UI_DIR = PROJECT_ROOT / "app" / "ui"
+
+if UI_DIR.exists():
+    app.mount("/ui", StaticFiles(directory=UI_DIR), name="ui")
+
 
 def load_artifacts() -> tuple[object | None, dict]:
     pipeline = None
@@ -53,6 +68,7 @@ def load_artifacts() -> tuple[object | None, dict]:
             ImportError,
             AttributeError,
             OSError,
+            XGBoostError,
         ) as exc:
             # API must stay up even if local model artifact cannot be deserialized.
             logging.getLogger("api.predict").warning(
@@ -185,6 +201,11 @@ def _refresh_derived_metrics() -> None:
     exp_count, run_count = _scan_mlflow_store(MLFLOW_DIR)
     MLFLOW_EXPERIMENTS.set(float(exp_count))
     MLFLOW_RUNS.set(float(run_count))
+
+
+@app.get("/", include_in_schema=False)
+def ui_home() -> FileResponse:
+    return FileResponse(UI_DIR / "index.html")
 
 
 @app.get("/health", response_model=HealthResponse)

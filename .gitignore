@@ -22,4 +22,7 @@ Thumbs.db
 logs/inference/*.jsonl
 
 # Local model artifacts
-models/best_model/
+models/
+
+# MLflow local tracking
+mlruns/

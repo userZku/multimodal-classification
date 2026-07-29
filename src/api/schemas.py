@@ -48,12 +48,15 @@ class TrainRequest(BaseModel):
             "example": {
                 "dataset_path": "data/raw/dataset_trajectoire_emploi_Sujet Examen CISIA - Promo Upskilling Atlas - mai-oct2026 (Session-00279143).csv",
                 "trigger": "manual",
+                "mlflow_experiment": "multimodal-classification",
             }
         },
     )
 
     dataset_path: str | None = None
     trigger: str = "manual"
+    mlflow_tracking_uri: str | None = None
+    mlflow_experiment: str | None = None
 
 
 class TrainResponse(BaseModel):

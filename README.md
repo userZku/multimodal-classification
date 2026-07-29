@@ -69,6 +69,7 @@ Mode d'exploitation actuel :
 - Le réentraînement peut être déclenché via l'API (`/retrain` ou `/train`) ou hors API (pipeline/notebook).
 - Les inférences sont journalisées dans `logs/inference/api_predict_requests.jsonl`.
 - Les événements d'entraînement sont journalisés dans `logs/inference/api_train_events.jsonl`.
+- Les runs d'entraînement sont tracés avec MLflow (paramètres, métriques, artefacts modèle).
 
 Objectif portfolio : documentation Swagger exploitable, avec des exemples de requêtes et de réponses.
 
@@ -191,6 +192,24 @@ Module Python pour entrainer directement le modele final XGBoost du scenario S1 
 
 ```bash
 python -m src.modeling.train
+```
+
+Avec options MLflow:
+
+```bash
+python -m src.modeling.train --mlflow-experiment multimodal-classification --mlflow-tracking-uri ./mlruns
+```
+
+Interface MLflow locale:
+
+```bash
+mlflow ui --backend-store-uri ./mlruns --port 5000
+```
+
+Puis ouvrir:
+
+```text
+http://127.0.0.1:5000
 ```
 
 Avec un CSV explicite:

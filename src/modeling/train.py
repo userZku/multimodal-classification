@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -17,6 +19,8 @@ from src.config import (
     CRITICAL_CLASS,
     DATA_DIR,
     DATA_RAW_DIR,
+    MLFLOW_DIR,
+    MLFLOW_EXPERIMENT,
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
     RANDOM_STATE,
@@ -64,7 +68,66 @@ def build_training_pipeline(feature_columns: list[str]) -> Pipeline:
     ])
 
 
-def train_and_save_model(csv_path: str | None = None) -> dict:
+def _setup_mlflow(tracking_uri: str | None = None, experiment_name: str | None = None):
+    import mlflow
+
+    effective_tracking_uri = tracking_uri or str(MLFLOW_DIR.resolve())
+    if "://" not in effective_tracking_uri:
+        effective_tracking_uri = Path(effective_tracking_uri).resolve().as_uri()
+
+    # MLflow 2.16+ blocks filesystem store by default unless this flag is set.
+    if effective_tracking_uri.startswith("file://"):
+        os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+
+    mlflow.set_tracking_uri(effective_tracking_uri)
+    mlflow.set_experiment(experiment_name or MLFLOW_EXPERIMENT)
+    return mlflow, effective_tracking_uri
+
+
+def _log_mlflow_run(
+    *,
+    mlflow,
+    pipeline: Pipeline,
+    metrics: dict,
+    feature_columns: list[str],
+    dataset_ref: str,
+    model_path: Path,
+) -> tuple[str, str]:
+    clf = pipeline.named_steps["clf"]
+    params = {
+        "scenario": "S1_multimodal_complet",
+        "model_name": "xgboost",
+        "random_state": RANDOM_STATE,
+        "dataset_ref": dataset_ref,
+        "n_features": len(feature_columns),
+        "n_estimators": int(getattr(clf, "n_estimators", 0)),
+        "max_depth": int(getattr(clf, "max_depth", 0)),
+        "learning_rate": float(getattr(clf, "learning_rate", 0.0)),
+        "subsample": float(getattr(clf, "subsample", 0.0)),
+        "colsample_bytree": float(getattr(clf, "colsample_bytree", 0.0)),
+    }
+    numeric_metrics = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
+
+    with mlflow.start_run(run_name="xgboost-s1-train") as run:
+        mlflow.log_params(params)
+        mlflow.log_metrics(numeric_metrics)
+        mlflow.log_dict({"features": feature_columns}, "features.json")
+        mlflow.log_dict(metrics, "metrics.json")
+        mlflow.log_artifact(str(model_path), artifact_path="model_artifacts")
+        return run.info.run_id, run.info.experiment_id
+
+
+def train_and_save_model(
+    csv_path: str | None = None,
+    *,
+    mlflow_tracking_uri: str | None = None,
+    mlflow_experiment: str | None = None,
+) -> dict:
+    mlflow, effective_tracking_uri = _setup_mlflow(
+        tracking_uri=mlflow_tracking_uri,
+        experiment_name=mlflow_experiment,
+    )
+
     df = load_training_data(csv_path=csv_path)
     if TARGET_COL not in df.columns:
         raise ValueError(f"Target column missing: {TARGET_COL}")
@@ -110,12 +173,27 @@ def train_and_save_model(csv_path: str | None = None) -> dict:
     BEST_MODEL_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipeline, BEST_MODEL_PATH)
 
+    run_id, experiment_id = _log_mlflow_run(
+        mlflow=mlflow,
+        pipeline=pipeline,
+        metrics=metrics,
+        feature_columns=X_train.columns.tolist(),
+        dataset_ref=csv_path or "auto:data/raw/*.csv|data/*.csv",
+        model_path=BEST_MODEL_PATH,
+    )
+
     metadata = {
         "model_name": "xgboost",
         "scenario": "S1_multimodal_complet",
         "trained_at": datetime.now(tz=timezone.utc).isoformat(),
         "features": X_train.columns.tolist(),
         "metrics": metrics,
+        "mlflow": {
+            "tracking_uri": effective_tracking_uri,
+            "experiment_name": mlflow_experiment or MLFLOW_EXPERIMENT,
+            "experiment_id": experiment_id,
+            "run_id": run_id,
+        },
     }
     BEST_MODEL_METADATA_PATH.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2),
@@ -127,9 +205,25 @@ def train_and_save_model(csv_path: str | None = None) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train and serialize model artifacts from the project dataset")
     parser.add_argument("--csv-path", dest="csv_path", default=None, help="Optional path to a custom training CSV")
+    parser.add_argument(
+        "--mlflow-tracking-uri",
+        dest="mlflow_tracking_uri",
+        default=None,
+        help="MLflow tracking URI (default: local mlruns folder)",
+    )
+    parser.add_argument(
+        "--mlflow-experiment",
+        dest="mlflow_experiment",
+        default=None,
+        help="MLflow experiment name (default from config)",
+    )
     args = parser.parse_args()
 
-    metadata = train_and_save_model(csv_path=args.csv_path)
+    metadata = train_and_save_model(
+        csv_path=args.csv_path,
+        mlflow_tracking_uri=args.mlflow_tracking_uri,
+        mlflow_experiment=args.mlflow_experiment,
+    )
     print(json.dumps(metadata, ensure_ascii=False, indent=2))
 
 

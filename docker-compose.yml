@@ -10,6 +10,7 @@ services:
     volumes:
       - ./models:/app/models
       - ./logs:/app/logs
+      - ./mlruns:/app/mlruns
 
   prometheus:
     image: prom/prometheus:v2.54.1

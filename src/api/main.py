@@ -150,7 +150,11 @@ def retrain(payload: TrainRequest) -> TrainResponse:
 
     with TRAIN_LATENCY.time():
         try:
-            metadata = train_and_save_model(csv_path=payload.dataset_path)
+            metadata = train_and_save_model(
+                csv_path=payload.dataset_path,
+                mlflow_tracking_uri=payload.mlflow_tracking_uri,
+                mlflow_experiment=payload.mlflow_experiment,
+            )
             reload_artifacts()
             TRAIN_COUNTER.labels(status="ok").inc()
         except Exception as exc:

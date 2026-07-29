@@ -9,6 +9,8 @@ MODELS_DIR = PROJECT_ROOT / "models"
 BEST_MODEL_DIR = MODELS_DIR / "best_model"
 BEST_MODEL_PATH = BEST_MODEL_DIR / "model.joblib"
 BEST_MODEL_METADATA_PATH = BEST_MODEL_DIR / "metadata.json"
+MLFLOW_DIR = PROJECT_ROOT / "mlruns"
+MLFLOW_EXPERIMENT = "multimodal-classification"
 
 RANDOM_STATE = 42
 TARGET_COL = "classe_retour_emploi"

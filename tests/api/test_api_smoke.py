@@ -34,7 +34,7 @@ def test_predict_returns_503_when_model_not_trained() -> None:
 
 
 def test_retrain_endpoint_returns_ok_with_mocked_training(monkeypatch) -> None:
-    def fake_train_and_save_model(csv_path=None):
+    def fake_train_and_save_model(csv_path=None, **kwargs):
         return {
             "metrics": {
                 "accuracy": 0.75,

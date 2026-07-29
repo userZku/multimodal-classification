@@ -34,6 +34,8 @@ const errorBox = document.getElementById("error-box");
 const historyList = document.getElementById("history-list");
 const historyEmpty = document.getElementById("history-empty");
 const refreshHistoryButton = document.getElementById("refresh-history");
+const retrainButton = document.getElementById("retrain-button");
+const retrainFeedback = document.getElementById("retrain-feedback");
 
 function normalizeRomeCode(value) {
   return (value || "").trim().toUpperCase();
@@ -49,12 +51,15 @@ function hydrateForm(values) {
   });
 }
 
-function setHealthState(ok, message, loaded, version) {
+function setHealthState(ok, message, loaded, version, runId) {
   healthDot.classList.remove("ok", "error");
   healthDot.classList.add(ok ? "ok" : "error");
   healthLabel.textContent = message;
   modelLoaded.textContent = loaded;
   modelVersion.textContent = version;
+
+  retrainFeedback.classList.remove("hidden");
+  retrainFeedback.textContent = `Run courant: ${runId || "-"}`;
 }
 
 async function loadHealth() {
@@ -65,10 +70,11 @@ async function loadHealth() {
       response.ok,
       response.ok ? "Service disponible" : "Service indisponible",
       data.model_loaded ? "Oui" : "Non",
-      data.model_version || "-"
+      data.model_version || "-",
+      data.run_id || "-"
     );
   } catch (error) {
-    setHealthState(false, "Échec de connexion API", "-", "-");
+    setHealthState(false, "Échec de connexion API", "-", "-", "-");
   }
 }
 
@@ -170,7 +176,7 @@ function renderHistory(items) {
 
 async function loadHistory() {
   try {
-    const response = await fetch("/history?limit=8");
+    const response = await fetch("/history?limit=6");
     if (!response.ok) {
       renderHistory([]);
       return;
@@ -179,6 +185,35 @@ async function loadHistory() {
     renderHistory(data.items || []);
   } catch (error) {
     renderHistory([]);
+  }
+}
+
+async function triggerRetrain() {
+  retrainButton.disabled = true;
+  retrainFeedback.classList.remove("hidden");
+  retrainFeedback.textContent = "Retrain en cours...";
+
+  try {
+    const response = await fetch("/retrain", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ trigger: "ui_manual" }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      retrainFeedback.textContent = data.detail || "Échec du retrain";
+      return;
+    }
+
+    retrainFeedback.textContent = `Retrain OK (${data.event_id}) - run: ${data.run_id || "-"}`;
+    await loadHealth();
+  } catch (error) {
+    retrainFeedback.textContent = "Erreur de connexion retrain";
+  } finally {
+    retrainButton.disabled = false;
   }
 }
 
@@ -231,6 +266,10 @@ form.addEventListener("submit", async (event) => {
 
 refreshHistoryButton.addEventListener("click", () => {
   loadHistory();
+});
+
+retrainButton.addEventListener("click", () => {
+  triggerRetrain();
 });
 
 hydrateForm(examplePayload);

@@ -135,6 +135,10 @@ body {
   color: var(--ink);
 }
 
+#retrain-button {
+  margin-left: auto;
+}
+
 .status-card {
   padding: 14px 4px;
   display: flex;
@@ -215,6 +219,14 @@ body {
 
 .quick-links a {
   font-size: 0.95rem;
+}
+
+.retrain-feedback {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  align-self: flex-end;
+  text-align: right;
 }
 
 .content-grid {

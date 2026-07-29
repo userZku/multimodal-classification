@@ -233,6 +233,7 @@ def health() -> HealthResponse:
         status="ok",
         model_loaded=loaded,
         model_version=model_version() if loaded else "unavailable",
+        run_id=METADATA.get("mlflow", {}).get("run_id"),
     )
 
 
@@ -310,7 +311,6 @@ def predict(payload: PredictRequest) -> PredictResponse:
 
 
 @app.post("/retrain", response_model=TrainResponse)
-@app.post("/train", response_model=TrainResponse)
 def retrain(payload: TrainRequest) -> TrainResponse:
     event_id = f"train_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}"
 
@@ -364,5 +364,6 @@ def retrain(payload: TrainRequest) -> TrainResponse:
         status="ok",
         event_id=event_id,
         model_version=model_version(),
+        run_id=metadata.get("mlflow", {}).get("run_id"),
         metrics=metadata.get("metrics", {}),
     )

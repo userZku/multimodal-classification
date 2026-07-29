@@ -63,6 +63,7 @@ class TrainResponse(BaseModel):
     status: str
     event_id: str
     model_version: str
+    run_id: str | None = None
     metrics: dict
 
 
@@ -70,3 +71,4 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     model_version: str
+    run_id: str | None = None

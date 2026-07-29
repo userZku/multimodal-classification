@@ -110,3 +110,8 @@ def test_history_returns_recent_prediction_events(monkeypatch, tmp_path) -> None
     data = response.json()
     assert data["count"] == 1
     assert data["items"][0]["request_id"] == "req_002"
+
+
+def test_train_alias_removed_returns_404() -> None:
+    response = client.post("/train", json={"trigger": "test"})
+    assert response.status_code == 404

@@ -11,15 +11,25 @@
 
 Ce projet montre un cycle ML complet, de la modélisation au monitoring de service, sur un cas d'usage de classification multiclasse du délai de retour à l'emploi.
 
-Points forts:
+Le modèle est entraîné sur un dataset de 2 500 lignes qui combine:
+- des variables tabulaires (âge, diplôme, ancienneté, statut allocataire, code ROME, zone géographique, variable sensible),
+- un texte libre de synthèse d'entretien.
 
-| Axe | Ce qui est en place |
+Target à prédire: `classe_retour_emploi`
+- classe 0: retour rapide (< 6 mois)
+- classe 1: retour moyen (6 à 12 mois)
+- classe 2: risque de longue durée (> 12 mois)
+
+Aujourd'hui, le projet couvre déjà:
+
+| Partie | En place |
 |---|---|
-| Modeling | Pipeline tabulaire + texte, scénario S1 XGBoost, entraînement scriptable |
-| Serving | API FastAPI avec endpoints health, predict, retrain, metrics |
-| Supervision | Prometheus + Grafana, logs JSONL, métriques applicatives |
-| Tracking | Runs MLflow (paramètres, métriques, artifacts, run metadata) |
-| Delivery | Workflow GitHub Actions CI/CD, build Docker, publication image GHCR |
+| Modèle | Pipeline multimodal tabulaire + texte avec XGBoost |
+| API | Service FastAPI avec `/health`, `/predict`, `/retrain`, `/history`, `/metrics` |
+| Interface | UI de démo pour tester une prédiction et relire les dernières inférences |
+| Suivi ML | Tracking MLflow des runs (paramètres, métriques, artefacts) |
+| Monitoring | Supervision Prometheus + Grafana |
+| Delivery | CI/CD GitHub Actions (tests, build, publication de l'image) |
 
 ## Sommaire
 
@@ -107,7 +117,7 @@ Implémentation: [src/api/main.py](src/api/main.py)
 | GET /health | état de service | statut + version modèle |
 | POST /predict | inférence unitaire | classe, confiance, statut |
 | POST /retrain | réentraînement | event_id, version, métriques |
-| POST /train | alias de /retrain | idem |
+| GET /history | historique des inférences | derniers événements journalisés |
 | GET /metrics | exposition Prometheus | métriques process + applicatives |
 
 Swagger local:

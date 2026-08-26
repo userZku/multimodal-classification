@@ -25,6 +25,7 @@ Aujourd'hui, le projet couvre déjà:
 | Partie | En place |
 |---|---|
 | Modèle | Pipeline multimodal tabulaire + texte avec XGBoost |
+| Docker | Image API + orchestration locale via Docker Compose |
 | API | Service FastAPI avec `/health`, `/predict`, `/retrain`, `/history`, `/metrics` |
 | Interface | UI de démo pour tester une prédiction et relire les dernières inférences |
 | Suivi ML | Tracking MLflow des runs (paramètres, métriques, artefacts) |

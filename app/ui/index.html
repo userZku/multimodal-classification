@@ -13,53 +13,54 @@
     <link rel="stylesheet" href="/ui/styles.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Portfolio ML Ops</p>
-          <h1>Prédire le délai de retour à l'emploi</h1>
-          <p class="hero-text">
-            Interface de démonstration branchée sur l'API FastAPI pour tester une
-            prédiction, vérifier l'état du service et naviguer vers les outils de
-            supervision.
-          </p>
-          <div class="hero-actions">
-            <a class="button primary" href="#predict-form">Tester une prédiction</a>
-            <a class="button ghost" href="/docs" target="_blank" rel="noreferrer">Swagger</a>
-            <button class="button ghost" type="button" id="retrain-button">
-              Déclencher un retrain
-            </button>
-          </div>
-          <small id="retrain-feedback" class="retrain-feedback hidden"></small>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">ML</span>
+          <span><strong>Atlas</strong><small>Classification</small></span>
         </div>
+        <nav class="side-nav" aria-label="Navigation principale">
+          <p class="nav-title">Système</p>
+          <a class="nav-link active" href="#overview"><span class="nav-icon">⌂</span>Vue d'ensemble</a>
+          <a class="nav-link" href="#predict-form"><span class="nav-icon">⌁</span>Prédiction</a>
+          <a class="nav-link" href="#history"><span class="nav-icon">◷</span>Historique</a>
+          <p class="nav-title">Outils</p>
+          <a class="nav-link" href="/docs" target="_blank" rel="noreferrer"><span class="nav-icon">◇</span>Swagger</a>
+          <a class="nav-link" href="http://127.0.0.1:9090" target="_blank" rel="noreferrer"><span class="nav-icon">▥</span>Prometheus</a>
+          <a class="nav-link" href="http://127.0.0.1:3000" target="_blank" rel="noreferrer"><span class="nav-icon">▦</span>Grafana</a>
+          <a class="nav-link" href="http://127.0.0.1:5000" target="_blank" rel="noreferrer"><span class="nav-icon">◫</span>MLflow</a>
+        </nav>
+        <div class="sidebar-footer"><span class="status-dot" id="health-dot"></span><span id="health-label">Vérification du service...</span></div>
+      </aside>
 
-        <aside class="status-card">
-          <div class="status-head">
-            <span class="status-dot" id="health-dot"></span>
-            <span id="health-label">Vérification du service...</span>
-          </div>
-          <dl class="status-grid">
-            <div>
-              <dt>Modèle chargé</dt>
-              <dd id="model-loaded">-</dd>
-            </div>
-            <div>
-              <dt>Version</dt>
-              <dd id="model-version">-</dd>
-            </div>
-          </dl>
-          <div class="tools-disclosure" aria-label="Outils avancés">
-            <span class="tools-label">Outils avancés</span>
-            <div class="quick-links">
-              <a href="http://127.0.0.1:9090" target="_blank" rel="noreferrer">Prometheus</a>
-              <a href="http://127.0.0.1:3000" target="_blank" rel="noreferrer">Grafana</a>
-              <a href="http://127.0.0.1:5000" target="_blank" rel="noreferrer">MLflow</a>
-            </div>
-          </div>
-        </aside>
-      </header>
+      <div class="main-area">
+        <header class="topbar">
+          <div><span class="breadcrumb">Système /</span> Vue d'ensemble</div>
+          <div class="topbar-meta"><span class="live-dot"></span> Service ML local <span class="topbar-user">Administrateur</span></div>
+        </header>
 
-      <main class="content-grid">
+        <main class="dashboard" id="overview">
+          <header class="page-heading">
+            <div>
+              <p class="eyebrow">Portfolio ML Ops</p>
+              <h1>Classification multimodale</h1>
+              <p class="hero-text">Prédire le délai de retour à l'emploi à partir des données socio-professionnelles et de la synthèse d'entretien.</p>
+            </div>
+            <div class="hero-actions">
+              <a class="button primary" href="#predict-form">Nouvelle prédiction</a>
+              <button class="button ghost" type="button" id="retrain-button">Relancer l'entraînement</button>
+              <small id="retrain-feedback" class="retrain-feedback hidden"></small>
+            </div>
+          </header>
+
+          <section class="overview-cards" aria-label="État du système">
+            <div class="overview-card"><span class="card-label">État du service</span><strong class="card-value card-status"><span class="status-dot ok"></span> Opérationnel</strong><span class="card-note">API FastAPI disponible</span></div>
+            <div class="overview-card"><span class="card-label">Modèle chargé</span><strong class="card-value" id="model-loaded">-</strong><span class="card-note">Version <span id="model-version">-</span></span></div>
+            <div class="overview-card"><span class="card-label">Classes prédites</span><strong class="card-value">3</strong><span class="card-note">Rapide, moyen, longue durée</span></div>
+            <div class="overview-card"><span class="card-label">Suivi des runs</span><strong class="card-value">MLflow</strong><span class="card-note">Prometheus + Grafana</span></div>
+          </section>
+
+          <div class="content-grid">
         <section class="panel form-panel">
           <div class="panel-head">
             <p class="panel-kicker">Inférence</p>
@@ -133,7 +134,7 @@
           </form>
         </section>
 
-        <section class="panel result-panel">
+        <section class="panel result-panel" id="history">
           <div class="panel-head">
             <p class="panel-kicker">Résultat</p>
             <h2>Sortie du modèle</h2>
@@ -182,7 +183,9 @@
             <ul id="history-list" class="history-list hidden"></ul>
           </section>
         </section>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
 
     <script src="/ui/app.js"></script>

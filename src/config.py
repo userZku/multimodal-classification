@@ -21,9 +21,9 @@ CATEGORICAL_FEATURES = [
     "niveau_diplome",
     "code_rome_vise",
     "est_allocataire",
-    "nationalite_hors_ue",
     "departement_insee",
 ]
 
+PRODUCTION_SCENARIO = "S2_sans_variable_sensible"
 CRITICAL_CLASS = 2
 ABSTENTION_THRESHOLD = 0.55

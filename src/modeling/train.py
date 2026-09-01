@@ -23,6 +23,7 @@ from src.config import (
     MLFLOW_EXPERIMENT,
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
+    PRODUCTION_SCENARIO,
     RANDOM_STATE,
     TARGET_COL,
     TEXT_FEATURE,
@@ -52,7 +53,7 @@ def build_training_pipeline(feature_columns: list[str]) -> Pipeline:
     spec = resolve_feature_spec(feature_columns)
     preprocessor = build_preprocessor(spec, use_text=True)
 
-    # Parametres XGBoost alignes avec la variante S1 du notebook.
+    # Parametres XGBoost alignes avec la variante S2 du notebook.
     classifier = XGBClassifier(
         n_estimators=450,
         max_depth=5,
@@ -101,7 +102,7 @@ def _log_mlflow_run(
 ) -> tuple[str, str]:
     clf = pipeline.named_steps["clf"]
     params = {
-        "scenario": "S1_multimodal_complet",
+        "scenario": PRODUCTION_SCENARIO,
         "model_name": "xgboost",
         "random_state": RANDOM_STATE,
         "dataset_ref": dataset_ref,
@@ -114,7 +115,7 @@ def _log_mlflow_run(
     }
     numeric_metrics = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
 
-    with mlflow.start_run(run_name="xgboost-s1-train") as run:
+    with mlflow.start_run(run_name="xgboost-s2-train") as run:
         mlflow.log_params(params)
         mlflow.log_metrics(numeric_metrics)
         mlflow.log_dict({"features": feature_columns}, "features.json")
@@ -151,7 +152,7 @@ def train_and_save_model(
         shuffle=True,
     )
 
-    # Scenario S1: toutes les features modele (numeriques + categorielles + texte)
+    # Scenario S2: variables multimodales sans nationalite_hors_ue.
     num_feats = [c for c in NUMERIC_FEATURES if c in X_train.columns]
     cat_feats = [
         c for c in CATEGORICAL_FEATURES if c in X_train.columns and c != TEXT_FEATURE
@@ -161,7 +162,7 @@ def train_and_save_model(
     )
     if unknown_features:
         raise ValueError(
-            f"Features non mappees pour S1_multimodal_complet: {unknown_features}"
+            f"Features non mappees pour {PRODUCTION_SCENARIO}: {unknown_features}"
         )
 
     pipeline = build_training_pipeline(X_train.columns.tolist())
@@ -202,7 +203,7 @@ def train_and_save_model(
 
     metadata = {
         "model_name": "xgboost",
-        "scenario": "S1_multimodal_complet",
+        "scenario": PRODUCTION_SCENARIO,
         "trained_at": datetime.now(tz=timezone.utc).isoformat(),
         "features": X_train.columns.tolist(),
         "metrics": metrics,

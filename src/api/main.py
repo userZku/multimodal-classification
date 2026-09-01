@@ -33,6 +33,7 @@ from src.config import (
     BEST_MODEL_METADATA_PATH,
     BEST_MODEL_PATH,
     MLFLOW_DIR,
+    PRODUCTION_SCENARIO,
     PROJECT_ROOT,
 )
 from src.features.preprocessing import build_model_frame
@@ -58,8 +59,13 @@ if UI_DIR.exists():
 
 
 def load_artifacts() -> tuple[object | None, dict]:
+    metadata = (
+        json.loads(BEST_MODEL_METADATA_PATH.read_text(encoding="utf-8"))
+        if BEST_MODEL_METADATA_PATH.exists()
+        else {}
+    )
     pipeline = None
-    if BEST_MODEL_PATH.exists():
+    if BEST_MODEL_PATH.exists() and metadata.get("scenario") == PRODUCTION_SCENARIO:
         try:
             pipeline = joblib.load(BEST_MODEL_PATH)
         except (
@@ -75,11 +81,11 @@ def load_artifacts() -> tuple[object | None, dict]:
                 "Failed to load pipeline artifact %s: %s", BEST_MODEL_PATH, exc
             )
             pipeline = None
-    metadata = (
-        json.loads(BEST_MODEL_METADATA_PATH.read_text(encoding="utf-8"))
-        if BEST_MODEL_METADATA_PATH.exists()
-        else {}
-    )
+    elif BEST_MODEL_PATH.exists():
+        logging.getLogger("api.predict").warning(
+            "Model artifact scenario is not %s; retrain before serving predictions.",
+            PRODUCTION_SCENARIO,
+        )
     return pipeline, metadata
 
 
@@ -89,7 +95,7 @@ PIPELINE, METADATA = load_artifacts()
 def model_version() -> str:
     trained_at = METADATA.get("trained_at")
     if trained_at:
-        return f"xgb-s1-{trained_at}"
+        return f"xgb-s2-{trained_at}"
     return "unavailable"
 
 

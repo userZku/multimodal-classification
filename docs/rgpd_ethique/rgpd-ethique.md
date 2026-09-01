@@ -22,7 +22,7 @@ Important:
 | Re-identification via identifiant | Atteinte a la vie privee | `usager_id` hors features, usage trace uniquement |
 | Conservation trop longue des logs | Exposition inutile de donnees | Logs structures et separes (inference/retrain) |
 | Detournement de finalite | Usage non conforme | Finalite et limites ecrites dans la doc projet |
-| Variable sensible (`nationalite_hors_ue`) | Risque de discrimination | Comparaison explicite de scenarios avec/sans variable sensible |
+| Variable sensible (`nationalite_hors_ue`) | Risque de discrimination directe | Exclue des features d'entrainement et du contrat API; S1 conserve uniquement pour comparaison experimentale |
 
 ## Point de vigilance ethique
 Trois sujets restent sensibles:

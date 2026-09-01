@@ -61,7 +61,11 @@ def resolve_feature_spec(columns: Iterable[str]) -> FeatureSpec:
 
 def build_model_frame(df: pd.DataFrame) -> pd.DataFrame:
     work = apply_feature_engineering(df)
-    drop_cols = [c for c in ["usager_id", "code_insee_commune"] if c in work.columns]
+    drop_cols = [
+        c
+        for c in ["usager_id", "code_insee_commune", "nationalite_hors_ue"]
+        if c in work.columns
+    ]
     return work.drop(columns=drop_cols, errors="ignore")
 
 

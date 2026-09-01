@@ -11,6 +11,7 @@ def test_build_model_frame_drops_technical_columns() -> None:
             {
                 "usager_id": "U_TEST_001",
                 "code_insee_commune": "75056",
+                "nationalite_hors_ue": 1,
                 "age": 36,
                 "synthese_entretien": "Projet cohérent",
             }
@@ -21,6 +22,7 @@ def test_build_model_frame_drops_technical_columns() -> None:
 
     assert "usager_id" not in out.columns
     assert "code_insee_commune" not in out.columns
+    assert "nationalite_hors_ue" not in out.columns
     assert "departement_insee" in out.columns
     assert out.loc[0, "departement_insee"] == "75"
 

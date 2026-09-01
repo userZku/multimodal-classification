@@ -6,7 +6,6 @@ const examplePayload = {
   code_rome_vise: "M1602",
   departement_insee: "75",
   est_allocataire: 1,
-  nationalite_hors_ue: 0,
   synthese_entretien: "Motivation stable, projet cohérent, recherche active.",
 };
 
@@ -229,7 +228,6 @@ function serializePayload() {
     code_rome_vise: romeCode,
     departement_insee: formData.get("departement_insee") || null,
     est_allocataire: Number(formData.get("est_allocataire")),
-    nationalite_hors_ue: Number(formData.get("nationalite_hors_ue")),
     synthese_entretien: formData.get("synthese_entretien") || "",
   };
 }

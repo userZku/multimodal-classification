@@ -36,7 +36,6 @@ def test_predict_returns_503_when_model_not_trained(monkeypatch) -> None:
         "anciennete_poste_ans": 4.0,
         "code_rome_vise": "M1602",
         "est_allocataire": 1,
-        "nationalite_hors_ue": 0,
         "departement_insee": "75",
         "synthese_entretien": "Recherche active",
     }
@@ -44,7 +43,7 @@ def test_predict_returns_503_when_model_not_trained(monkeypatch) -> None:
     assert response.status_code == 503
 
 
-def test_predict_rejects_unknown_payload_field() -> None:
+def test_predict_rejects_sensitive_payload_field() -> None:
     payload = {
         "age": 35,
         "niveau_diplome": "Bac",
@@ -54,7 +53,6 @@ def test_predict_rejects_unknown_payload_field() -> None:
         "nationalite_hors_ue": 0,
         "departement_insee": "75",
         "synthese_entretien": "Recherche active",
-        "unexpected_field": "forbidden",
     }
     response = client.post("/predict", json=payload)
     assert response.status_code == 422

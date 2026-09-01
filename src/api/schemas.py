@@ -14,7 +14,6 @@ class PredictRequest(BaseModel):
                 "anciennete_poste_ans": 4.0,
                 "code_rome_vise": "M1805",
                 "est_allocataire": 1,
-                "nationalite_hors_ue": 0,
                 "departement_insee": "75",
                 "synthese_entretien": "Motivation stable, projet coherent, recherche active.",
             }
@@ -28,7 +27,6 @@ class PredictRequest(BaseModel):
     code_rome_vise: str | None = None
     code_insee_commune: str | None = None
     est_allocataire: int | None = Field(default=None, ge=0, le=1)
-    nationalite_hors_ue: int | None = Field(default=None, ge=0, le=1)
     departement_insee: str | None = None
     synthese_entretien: str
 

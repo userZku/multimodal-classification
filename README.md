@@ -24,7 +24,7 @@ Aujourd'hui, le projet couvre déjà:
 
 | Partie | En place |
 |---|---|
-| Modèle | Pipeline multimodal tabulaire + texte avec XGBoost |
+| Modèle | Pipeline XGBoost S2 multimodal, sans variable sensible directe |
 | Docker | Image API + orchestration locale via Docker Compose |
 | API | Service FastAPI avec `/health`, `/predict`, `/retrain`, `/history`, `/metrics` |
 | Interface | UI de démo pour tester une prédiction et relire les dernières inférences |
@@ -97,8 +97,9 @@ Le script d'entraînement principal est dans [src/modeling/train.py](src/modelin
 
 | Élément | Détail |
 |---|---|
-| Modèle final | XGBoost (S1 multimodal complet) |
-| Features | numériques + catégorielles + texte |
+| Modèle final | XGBoost (S2 multimodal sans variable sensible) |
+| Features | numériques + diplôme ordinal + catégorielles nominales + texte |
+| Garde-fou | `nationalite_hors_ue` exclue de l'entraînement et de l'API |
 | Persistance | joblib + metadata JSON |
 | Tracking | MLflow local |
 

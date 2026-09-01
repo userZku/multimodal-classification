@@ -224,17 +224,13 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Risques / limites : possibilité de manquer un couple moins bien classé initialement mais meilleur après tuning.
 - Suivi / action : signaler explicitement dans la section 5.7 que le tuning reste ciblé et non exhaustif.
 
-## DEC-016 - Retenir S1 + XGBoost comme baseline assistive sous garde-fous
+## DEC-016 - Remplacée: ne pas déployer S1 avec variable sensible directe
 - Date : 2026-07-24
 - Section notebook : 5.6 / 5.7 / 6.1 / 6.2 / 6.3
-- Statut : accepted
-- Contexte : le scénario S1 avec XGBoost obtient la meilleure performance globale, mais le rappel de la classe 2 reste insuffisant et des erreurs critiques 2 -> 0 subsistent.
-- Décision : retenir S1 + XGBoost comme baseline de production assistive, avec escalade humaine et suivi explicite des erreurs critiques.
-- Alternatives considérées : retenir S2 par prudence éthique, ou privilégier S3/S4 pour des raisons de simplicité/explicabilité.
-- Justification : meilleur compromis global observé en test, tout en reconnaissant que le modèle ne doit pas être utilisé de façon autonome sur les cas sensibles.
-- Impact : trajectoire d'industrialisation clarifiée et arbitrage final défendable devant le jury.
-- Risques / limites : risque métier résiduel encore significatif sur la classe 2, plus exposition au biais car la variable sensible est présente dans S1.
-- Suivi / action : compléter ensuite la section 7 avec une stratégie d'abstention ou d'escalade basée sur la confiance prédictive.
+- Statut : superseded
+- Contexte : S1 avec XGBoost obtient la meilleure performance brute, mais exploite directement `nationalite_hors_ue`.
+- Décision initiale : S1 avait été proposé comme baseline assistive.
+- Décision de remplacement : voir DEC-023. S1 est désormais réservé à la comparaison expérimentale et ne peut pas être déployé.
 
 ## DEC-017 - Encadrer la baseline par une politique d'escalade basée sur la confiance
 - Date : 2026-07-27
@@ -277,12 +273,24 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Section notebook : 8.2 / 8.3 / 8.4 / 9.1
 - Statut : accepted
 - Contexte : besoin d'une industrialisation démontrable en local avec un service d'inférence simple, un point de retrain et des indicateurs techniques visibles pour la soutenance.
-- Décision : conserver une API FastAPI centrée sur `/predict`, `/retrain` (et alias `/train`), `/health` et `/metrics`, instrumentée Prometheus et déployée via Docker Compose avec Prometheus + Grafana.
+- Décision : conserver une API FastAPI centrée sur `/predict`, `/retrain`, `/history`, `/health` et `/metrics`, instrumentée Prometheus et déployée via Docker Compose avec Prometheus + Grafana.
 - Alternatives considérées : API plus riche (versioning avancé, batch, auth) dès maintenant, ou exposition de l'inférence sans stack de monitoring.
 - Justification : prioriser la lisibilité architecture + preuve d'exploitabilité, tout en gardant un coût de maintenance adapté au périmètre certif.
 - Impact : démonstration bout en bout plus crédible (train, serving, métriques, dashboard), et base opérationnelle pour suivre le taux d'escalade et les erreurs critiques en section 9.
 - Risques / limites : absence d'authentification et de gouvernance multi-utilisateurs ; couverture limitée aux métriques techniques et applicatives de base.
 - Suivi / action : compléter ensuite avec gestion des accès, alerting et runbook d'exploitation en contexte réel.
+
+## DEC-023 - Déployer S2 sans nationalité et encoder le diplôme comme variable ordinale
+- Date : 2026-09-01
+- Section notebook : 4.1 / 4.2 / 5.5 / 5.6 / 6.2
+- Statut : accepted
+- Contexte : la nationalité est une variable sensible directe et ne peut pas être utilisée par un modèle de production. Le niveau de diplôme possède quant à lui un ordre métier stable.
+- Décision : retenir S2 + XGBoost pour l'entraînement et l'inférence; supprimer `nationalite_hors_ue` des features, du contrat API et de l'UI; encoder `niveau_diplome` avec l'ordre `Sans diplôme < Bac < Bac+2 < Bac+5`; conserver le one-hot encoding pour les variables nominales.
+- Alternatives considérées : déployer S1 avec garde-fous humains, ou conserver le one-hot encoding pour le diplôme.
+- Justification : la conformité et la prévention de la discrimination directe priment sur le gain de performance de S1. L'encodage ordinal du diplôme rend le pipeline plus cohérent avec la sémantique de la donnée.
+- Impact : l'API refuse `nationalite_hors_ue`, l'artefact S2 est le seul artefact servi, et les tests couvrent l'exclusion de la variable sensible ainsi que l'ordre du diplôme.
+- Risques / limites : des proxys indirects et le texte libre restent à surveiller; le coût de l'encodage ordinal sur les métriques doit être suivi dans les évaluations futures.
+- Suivi / action : auditer les proxys par sous-population et réévaluer S2 à chaque évolution des données.
 
 ## DEC-021 - Activer le tracking MLflow sur l'entraînement et le retrain API
 - Date : 2026-07-29

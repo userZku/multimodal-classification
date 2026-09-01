@@ -23,6 +23,7 @@ from src.config import (
     MLFLOW_EXPERIMENT,
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
+    ORDINAL_FEATURES,
     PRODUCTION_SCENARIO,
     RANDOM_STATE,
     TARGET_COL,
@@ -154,11 +155,16 @@ def train_and_save_model(
 
     # Scenario S2: variables multimodales sans nationalite_hors_ue.
     num_feats = [c for c in NUMERIC_FEATURES if c in X_train.columns]
+    ordinal_feats = [c for c in ORDINAL_FEATURES if c in X_train.columns]
     cat_feats = [
         c for c in CATEGORICAL_FEATURES if c in X_train.columns and c != TEXT_FEATURE
     ]
     unknown_features = sorted(
-        set(X_train.columns) - set(num_feats) - set(cat_feats) - {TEXT_FEATURE}
+        set(X_train.columns)
+        - set(num_feats)
+        - set(ordinal_feats)
+        - set(cat_feats)
+        - {TEXT_FEATURE}
     )
     if unknown_features:
         raise ValueError(

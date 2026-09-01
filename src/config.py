@@ -17,8 +17,9 @@ TARGET_COL = "classe_retour_emploi"
 TEXT_FEATURE = "synthese_entretien"
 
 NUMERIC_FEATURES = ["age", "anciennete_poste_ans"]
+ORDINAL_FEATURES = ["niveau_diplome"]
+ORDINAL_CATEGORIES = [["Sans diplôme", "Bac", "Bac+2", "Bac+5"]]
 CATEGORICAL_FEATURES = [
-    "niveau_diplome",
     "code_rome_vise",
     "est_allocataire",
     "departement_insee",

@@ -8,14 +8,27 @@ from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
+from sklearn.preprocessing import (
+    FunctionTransformer,
+    OneHotEncoder,
+    OrdinalEncoder,
+    StandardScaler,
+)
 
-from src.config import CATEGORICAL_FEATURES, NUMERIC_FEATURES, TARGET_COL, TEXT_FEATURE
+from src.config import (
+    CATEGORICAL_FEATURES,
+    NUMERIC_FEATURES,
+    ORDINAL_CATEGORIES,
+    ORDINAL_FEATURES,
+    TARGET_COL,
+    TEXT_FEATURE,
+)
 
 
 @dataclass(frozen=True)
 class FeatureSpec:
     numeric: list[str]
+    ordinal: list[str]
     categorical: list[str]
     text: str
 
@@ -55,8 +68,14 @@ def apply_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
 def resolve_feature_spec(columns: Iterable[str]) -> FeatureSpec:
     cols = set(columns)
     numeric = [c for c in NUMERIC_FEATURES if c in cols]
+    ordinal = [c for c in ORDINAL_FEATURES if c in cols]
     categorical = [c for c in CATEGORICAL_FEATURES if c in cols and c != TEXT_FEATURE]
-    return FeatureSpec(numeric=numeric, categorical=categorical, text=TEXT_FEATURE)
+    return FeatureSpec(
+        numeric=numeric,
+        ordinal=ordinal,
+        categorical=categorical,
+        text=TEXT_FEATURE,
+    )
 
 
 def build_model_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -92,6 +111,20 @@ def build_preprocessor(spec: FeatureSpec, use_text: bool = True) -> ColumnTransf
         ]
     )
 
+    ordinal_pipeline = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            (
+                "encoder",
+                OrdinalEncoder(
+                    categories=ORDINAL_CATEGORIES,
+                    handle_unknown="use_encoded_value",
+                    unknown_value=-1,
+                ),
+            ),
+        ]
+    )
+
     text_pipeline = Pipeline(
         steps=[
             (
@@ -104,6 +137,7 @@ def build_preprocessor(spec: FeatureSpec, use_text: bool = True) -> ColumnTransf
 
     transformers: list[tuple[str, Pipeline, list[str]]] = [
         ("num", numeric_pipeline, spec.numeric),
+        ("ord", ordinal_pipeline, spec.ordinal),
         ("cat", categorical_pipeline, spec.categorical),
     ]
     if use_text:

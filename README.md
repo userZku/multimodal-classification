@@ -28,7 +28,7 @@ Aujourd'hui, le projet couvre déjà:
 | Docker | Image API + orchestration locale via Docker Compose |
 | API | Service FastAPI avec `/health`, `/predict`, `/retrain`, `/history`, `/metrics` |
 | Interface | UI de démo pour tester une prédiction et relire les dernières inférences |
-| Suivi ML | Tracking MLflow des runs (paramètres, métriques, artefacts) |
+| Suivi ML | Serveur MLflow Docker pour les runs, métriques et artefacts |
 | Monitoring | Supervision Prometheus + Grafana |
 | Delivery | CI/CD GitHub Actions (tests, build, publication de l'image) |
 
@@ -187,7 +187,7 @@ Sous Windows:
 .venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
 ```
 
-### 4) Lancer la stack complète (API + Prometheus + Grafana)
+### 4) Lancer la stack complète (API + MLflow + Prometheus + Grafana)
 
 ```bash
 docker compose up -d --build

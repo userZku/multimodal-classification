@@ -79,7 +79,11 @@ def build_training_pipeline(feature_columns: list[str]) -> Pipeline:
 def _setup_mlflow(tracking_uri: str | None = None, experiment_name: str | None = None):
     import mlflow
 
-    effective_tracking_uri = tracking_uri or str(MLFLOW_DIR.resolve())
+    effective_tracking_uri = (
+        tracking_uri
+        or os.environ.get("MLFLOW_TRACKING_URI")
+        or str(MLFLOW_DIR.resolve())
+    )
     if "://" not in effective_tracking_uri:
         effective_tracking_uri = Path(effective_tracking_uri).resolve().as_uri()
 

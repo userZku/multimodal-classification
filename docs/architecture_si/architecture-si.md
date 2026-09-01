@@ -8,7 +8,7 @@ Périmètre couvert:
 - entraînement batch et persistance artefacts;
 - exposition API de prédiction/retrain;
 - observabilité (Prometheus, Grafana, logs JSONL);
-- tracking expérimental (MLflow local).
+- tracking expérimental via serveur MLflow conteneurisé.
 
 ## 2. Composants principaux
 
@@ -19,7 +19,7 @@ Périmètre couvert:
 | Préprocessing | Feature engineering + préparation frame modèle | src/features/preprocessing.py |
 | Entraînement | Construction pipeline XGBoost + export artefacts | src/modeling/train.py |
 | Artefacts modèle | Pipeline joblib + metadata JSON | models/best_model |
-| Tracking ML | Historique runs, métriques, artefacts | mlruns |
+| Tracking ML | Serveur MLflow, historique des runs, métriques et artefacts | service `mlflow`, mlruns |
 | Logs applicatifs | Journaux JSONL inférence et retrain | logs/inference |
 | Monitoring | Scrape métriques + dashboards | infra/compose/prometheus, infra/compose/grafana |
 
@@ -32,7 +32,7 @@ Périmètre couvert:
 4. Split train/test stratifié.
 5. Fit pipeline (préprocessor + XGBoost).
 6. Calcul métriques (accuracy, f1_macro, recall classe 2, erreurs critiques 2->0).
-7. Sauvegarde modèle/metadata et log MLflow.
+7. Sauvegarde modèle/metadata et log vers le serveur MLflow.
 
 ### 3.2 Prédiction
 1. Réception payload JSON via /predict.

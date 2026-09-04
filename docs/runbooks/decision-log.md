@@ -315,3 +315,14 @@ Il doit être mis à jour à chaque décision importante (méthode, métrique, �
 - Impact : formulaire plus fluide, meilleure lisibilité du contrat API, et cohérence renforcée entre code de préprocessing et documentation section 8.
 - Risques / limites : la validation métier des codes ROME saisis librement reste limitée (pas de référentiel contrôlé en ligne dans cette version).
 - Suivi / action : ajouter ultérieurement une table de correspondance ROME (code/libellé) et un contrôle de validité côté backend si besoin d'usage opérationnel renforcé.
+
+## DEC-024 - Consolider S2, enrichir l'évaluation et activer MLflow dans Docker
+- Date : 2026-09-04
+- Section notebook : 4.2 / 5.2 / 5.3 / 5.4 / 5.6 / 7.2 / 8
+- Statut : accepted
+- Contexte : après le passage à S2, plusieurs éléments du notebook et de la stack restaient à aligner : encodage du diplôme, ROC-AUC, analyse des erreurs et disponibilité de MLflow dans Docker.
+- Décision : conserver `age` comme variable numérique à risque, surveillée par sous-population; encoder `niveau_diplome` avec `OrdinalEncoder` selon `Sans diplôme < Bac < Bac+2 < Bac+5`; suivre le ROC-AUC macro One-vs-Rest en complément du F1 macro; corriger l'analyse d'escalade pour ne plus afficher la nationalité; ajouter un serveur MLflow dans Docker Compose.
+- Justification : l'ordre du diplôme est un choix métier explicite, le ROC-AUC renseigne sur le classement probabiliste sans remplacer le F1 ni le recall de la classe 2, et MLflow doit être réellement accessible pour démontrer le suivi des runs.
+- Impact : les 12 tests passent; le nouveau modèle S2 est entraîné avec 7 features, sans `nationalite_hors_ue`; l'API crée des runs via `http://mlflow:5000`; l'interface MLflow est accessible sur le port 5000.
+- Risques / limites : `age` et le texte libre peuvent agir comme proxys; le ROC-AUC ne garantit ni la calibration ni l'absence d'erreurs `2 -> 0`; le backend MLflow file-store reste adapté à la démonstration mais devra migrer vers SQL en production.
+- Suivi / action : auditer les performances par tranche d'âge, mesurer la calibration et les erreurs critiques, puis planifier la migration MLflow vers un backend SQL.

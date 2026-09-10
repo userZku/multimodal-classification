@@ -28,4 +28,4 @@ models/
 mlruns/
 
 # Scripts
-scripts/
+scripts/take_screenshots.py

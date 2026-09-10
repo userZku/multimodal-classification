@@ -22,26 +22,23 @@
   "links": [],
   "panels": [
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "panels": [],
+      "title": "Service et qualité du modèle",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
           "mappings": [
             {
               "options": {
-                "0": {
-                  "index": 0,
-                  "text": "DOWN"
-                },
-                "1": {
-                  "index": 1,
-                  "text": "UP"
-                }
+                "0": { "index": 0, "text": "DOWN" },
+                "1": { "index": 1, "text": "UP" }
               },
               "type": "value"
             }
@@ -49,282 +46,398 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
       "id": 1,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value"
       },
       "targets": [
         {
-          "expr": "up{job=\"multimodal-api\"}",
+          "expr": "sum(up{job=\"multimodal-api\"}) or vector(0)",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "API Scrape Status",
+      "title": "API",
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
           },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(api_predict_total[5m])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Débit prédictions (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 85
-              }
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 2 },
+              { "color": "red", "value": 5 }
             ]
           },
           "unit": "percent"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 0
-      },
-      "id": 2,
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 },
+      "id": 3,
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
       },
       "targets": [
         {
-          "expr": "100 * rate(process_cpu_seconds_total[1m])",
-          "instant": false,
-          "legendFormat": "cpu_pct",
+          "expr": "100 * (sum(rate(api_predict_total{status=\"error\"}[5m])) or vector(0)) / clamp_min(sum(rate(api_predict_total[5m])) or vector(0), 0.0001)",
           "refId": "A"
         }
       ],
-      "title": "CPU API Process (%)",
-      "type": "timeseries"
+      "title": "Taux d'erreur /predict (5m)",
+      "type": "stat"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 8.0e+08
-              },
-              {
-                "color": "red",
-                "value": 1.2e+09
-              }
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 20 },
+              { "color": "red", "value": 40 }
             ]
           },
-          "unit": "decbytes"
+          "unit": "percent"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 0
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
       },
-      "id": 3,
+      "targets": [
+        {
+          "expr": "100 * (sum(rate(api_predict_total{status=\"a_revoir\"}[5m])) or vector(0)) / clamp_min(sum(rate(api_predict_total{status=~\"ok|a_revoir\"}[5m])) or vector(0), 0.0001)",
+          "refId": "A"
+        }
+      ],
+      "title": "Taux d'abstention (a_revoir)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.2 },
+              { "color": "red", "value": 0.5 }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(api_predict_latency_seconds_bucket[5m])) by (le))",
+          "refId": "A"
+        }
+      ],
+      "title": "Latence p95",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 3,
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.6 },
+              { "color": "green", "value": 0.68 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
+      "id": 6,
       "options": {
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
       "targets": [
         {
-          "expr": "process_resident_memory_bytes",
+          "expr": "api_model_metric{metric=\"f1_macro\"}",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "RAM API Process (RSS)",
+      "title": "F1 macro (modèle actif)",
       "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 2.5e+09
-              },
-              {
-                "color": "red",
-                "value": 4.0e+09
-              }
-            ]
-          },
-          "unit": "decbytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "process_virtual_memory_bytes",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Virtual Memory API Process",
-      "type": "stat"
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 101,
+      "panels": [],
+      "title": "Réponses du modèle",
+      "type": "row"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 25,
             "lineWidth": 2,
-            "showPoints": "never"
+            "showPoints": "never",
+            "stacking": { "group": "A", "mode": "normal" }
           },
           "unit": "reqps"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 5
-      },
-      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "id": 7,
       "options": {
         "legend": {
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
-          "expr": "sum(rate(api_predict_total[1m])) by (status)",
-          "legendFormat": "predict {{status}}",
+          "expr": "sum(rate(api_prediction_class_total[5m])) by (predicted_class)",
+          "legendFormat": "classe {{predicted_class}}",
           "refId": "A"
         }
       ],
-      "title": "Predict Throughput by Status (1m)",
+      "title": "Prédictions par classe (débit 5m)",
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
+          "color": { "mode": "palette-classic" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "id": 8,
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(api_prediction_class_total[$__range])) by (predicted_class)",
+          "instant": true,
+          "legendFormat": "classe {{predicted_class}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Répartition des classes prédites (période affichée)",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": { "mode": "line" }
           },
+          "decimals": 3,
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "transparent", "value": null },
+              { "color": "orange", "value": 0.55 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(api_prediction_confidence_sum[5m])) / clamp_min(sum(rate(api_prediction_confidence_count[5m])), 0.0001)",
+          "legendFormat": "confiance moyenne",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.10, sum(rate(api_prediction_confidence_bucket[5m])) by (le))",
+          "legendFormat": "p10",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(api_prediction_confidence_bucket[5m])) by (le))",
+          "legendFormat": "p90",
+          "refId": "C"
+        }
+      ],
+      "title": "Confiance du modèle (seuil d'abstention 0.55)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "decimals": 3,
+          "max": 1,
+          "min": 0,
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(api_prediction_proba_total[5m])) by (class_label) / on() group_left() clamp_min(sum(rate(api_prediction_confidence_count[5m])), 0.0001)",
+          "legendFormat": "classe {{class_label}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Probabilité moyenne prédite par classe",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 10,
@@ -335,23 +448,16 @@
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 5
-      },
-      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "id": 11,
       "options": {
         "legend": {
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
@@ -363,148 +469,24 @@
           "expr": "histogram_quantile(0.95, sum(rate(api_predict_latency_seconds_bucket[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(api_predict_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
         }
       ],
-      "title": "Predict Latency Quantiles",
+      "title": "Latence /predict",
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 2
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 0,
-        "y": 13
-      },
-      "id": 7,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "100 * sum(rate(api_predict_total{status=\"error\"}[5m])) / clamp_min(sum(rate(api_predict_total[5m])), 0.000001)",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Predict Error Rate (5m)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.1
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 13
-      },
-      "id": 8,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(api_predict_total{status=\"model_not_ready\"}[5m]))",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Model Not Ready Rate (5m)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
-            "fillOpacity": 12,
+            "fillOpacity": 15,
             "lineWidth": 2,
             "showPoints": "never"
           },
@@ -512,496 +494,303 @@
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 13
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(api_train_total[1m])) by (status)",
-          "legendFormat": "train {{status}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Train/Retrain Throughput by Status (1m)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 5
-              },
-              {
-                "color": "red",
-                "value": 20
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 18
-      },
-      "id": 10,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "100 * sum(rate(api_train_total{status=\"error\"}[5m])) / clamp_min(sum(rate(api_train_total[5m])), 0.000001)",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Train Error Rate (5m)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 12,
-            "lineWidth": 2,
-            "showPoints": "auto"
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 16,
-        "x": 8,
-        "y": 18
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "api_jsonl_predict_events_total",
-          "legendFormat": "jsonl_predict_events",
-          "refId": "A"
-        },
-        {
-          "expr": "api_jsonl_train_events_total",
-          "legendFormat": "jsonl_train_events",
-          "refId": "B"
-        },
-        {
-          "expr": "api_jsonl_train_error_events_total",
-          "legendFormat": "jsonl_train_error_events",
-          "refId": "C"
-        },
-        {
-          "expr": "api_mlflow_runs_total",
-          "legendFormat": "mlflow_runs",
-          "refId": "D"
-        },
-        {
-          "expr": "api_mlflow_experiments_total",
-          "legendFormat": "mlflow_experiments",
-          "refId": "E"
-        }
-      ],
-      "title": "JSONL and MLflow Counters Over Time",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 500
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 5,
-        "x": 0,
-        "y": 24
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
       "id": 12,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "textMode": "value_and_name"
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
-          "expr": "api_jsonl_predict_events_total",
-          "instant": true,
+          "expr": "sum(rate(api_predict_total[5m])) by (status)",
+          "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
-      "title": "JSONL Predict Events",
-      "type": "stat"
+      "title": "Statuts des réponses /predict",
+      "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "id": 102,
+      "panels": [],
+      "title": "Distribution des scores et exploitation",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 25
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "short"
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "scaleDistribution": { "type": "linear" }
+          }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 5,
-        "x": 5,
-        "y": 24
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
       "id": 13,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Oranges",
+          "steps": 64
         },
-        "textMode": "value_and_name"
+        "exemplars": { "color": "rgba(255,0,255,0.7)" },
+        "filterValues": { "le": 1e-9 },
+        "legend": { "show": true },
+        "rowsFrame": { "layout": "auto", "value": "predictions" },
+        "showValue": "never",
+        "tooltip": { "show": true, "yHistogram": true },
+        "yAxis": { "axisPlacement": "left", "decimals": 2, "unit": "none" }
       },
       "targets": [
         {
-          "expr": "api_jsonl_train_events_total",
-          "instant": true,
+          "expr": "sum(increase(api_prediction_confidence_bucket[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{le}}",
           "refId": "A"
         }
       ],
-      "title": "JSONL Train Events",
-      "type": "stat"
+      "title": "Distribution de la confiance dans le temps",
+      "type": "heatmap"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "palette-classic" },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
+            "steps": [{ "color": "blue", "value": null }]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 5,
-        "x": 10,
-        "y": 24
-      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 32 },
       "id": 14,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true
       },
       "targets": [
         {
-          "expr": "api_jsonl_train_error_events_total",
+          "expr": "sum(increase(api_predict_total[$__range])) by (status)",
           "instant": true,
+          "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
-      "title": "JSONL Train Errors",
-      "type": "stat"
+      "title": "Volume de réponses par statut (période)",
+      "type": "bargauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
+          "decimals": 3,
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "green", "value": 0.65 }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 15,
-        "y": 24
-      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 32 },
       "id": 15,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
+        "displayMode": "lcd",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true
       },
       "targets": [
         {
-          "expr": "api_mlflow_experiments_total",
+          "expr": "api_model_metric{metric=~\"f1_macro|accuracy|recall_class_2\"}",
           "instant": true,
+          "legendFormat": "{{metric}}",
           "refId": "A"
         }
       ],
-      "title": "MLflow Experiments",
-      "type": "stat"
+      "title": "Métriques hors ligne du modèle servi",
+      "type": "bargauge"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ]
+            "steps": [{ "color": "blue", "value": null }]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 5,
-        "x": 19,
-        "y": 24
-      },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 40 },
       "id": 16,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
       },
       "targets": [
         {
-          "expr": "api_mlflow_runs_total",
+          "expr": "sum(increase(api_predict_total[$__range])) or vector(0)",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "MLflow Runs",
+      "title": "Prédictions servies (période)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 40 },
+      "id": 17,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "max(api_mlflow_runs_total) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Runs MLflow",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 40 },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "100 * rate(process_cpu_seconds_total[5m])",
+          "legendFormat": "cpu",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU API",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 800000000 },
+              { "color": "red", "value": 1200000000 }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 40 },
+      "id": 19,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes",
+          "legendFormat": "rss",
+          "refId": "A"
+        }
+      ],
+      "title": "RAM API (RSS)",
       "type": "stat"
     }
   ],
-  "refresh": "5s",
+  "refresh": "10s",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": [
-    "multimodal",
-    "api",
-    "prometheus",
-    "mlflow",
-    "jsonl"
-  ],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-30m",
-    "to": "now"
-  },
+  "tags": ["multimodal", "api", "model", "monitoring"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
   "timezone": "",
   "title": "Multimodal Runtime and API Observatory",
   "uid": "multimodal-api-overview",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }

@@ -123,6 +123,36 @@ MLFLOW_RUNS = Gauge(
     "api_mlflow_runs_total", "Number of MLflow runs found in local store"
 )
 
+PREDICTION_CLASS_COUNTER = Counter(
+    "api_prediction_class_total",
+    "Number of predictions by predicted class",
+    ["predicted_class"],
+)
+PREDICTION_CONFIDENCE = Histogram(
+    "api_prediction_confidence",
+    "Confidence (max probability) of the predicted class",
+    buckets=(0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.70, 0.80, 0.90, 0.95, 1.0),
+)
+PREDICTION_PROBA_SUM = Counter(
+    "api_prediction_proba",
+    "Cumulative predicted probability per class (divide by predict count for the mean)",
+    ["class_label"],
+)
+MODEL_QUALITY = Gauge(
+    "api_model_metric",
+    "Offline evaluation metrics of the currently served model",
+    ["metric"],
+)
+
+# Pre-create label combinations so panels show 0 instead of "No data".
+for _status in ("ok", "a_revoir", "error", "model_not_ready"):
+    PREDICT_COUNTER.labels(status=_status)
+for _status in ("ok", "error"):
+    TRAIN_COUNTER.labels(status=_status)
+for _class in ("0", "1", "2"):
+    PREDICTION_CLASS_COUNTER.labels(predicted_class=_class)
+    PREDICTION_PROBA_SUM.labels(class_label=_class)
+
 LOG_DIR = PROJECT_ROOT / "logs" / "inference"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 PREDICT_LOG_PATH = LOG_DIR / "api_predict_requests.jsonl"
@@ -143,9 +173,16 @@ if not train_logger.handlers:
     train_logger.addHandler(train_handler)
 
 
+def _refresh_model_quality_metrics() -> None:
+    for name, value in (METADATA.get("metrics") or {}).items():
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            MODEL_QUALITY.labels(metric=name).set(float(value))
+
+
 def reload_artifacts() -> None:
     global PIPELINE, METADATA
     PIPELINE, METADATA = load_artifacts()
+    _refresh_model_quality_metrics()
 
 
 def _count_file_lines(file_path: Path) -> int:
@@ -207,6 +244,8 @@ def _refresh_derived_metrics() -> None:
     exp_count, run_count = _scan_mlflow_store(MLFLOW_DIR)
     MLFLOW_EXPERIMENTS.set(float(exp_count))
     MLFLOW_RUNS.set(float(run_count))
+
+    _refresh_model_quality_metrics()
 
 
 def _read_jsonl_tail(file_path: Path, limit: int) -> list[dict]:
@@ -280,6 +319,12 @@ def predict(payload: PredictRequest) -> PredictResponse:
             status = "a_revoir" if confidence < ABSTENTION_THRESHOLD else "ok"
 
             PREDICT_COUNTER.labels(status=status).inc()
+            PREDICTION_CLASS_COUNTER.labels(predicted_class=str(prediction)).inc()
+            PREDICTION_CONFIDENCE.observe(confidence)
+            for class_index, class_proba in enumerate(proba):
+                PREDICTION_PROBA_SUM.labels(class_label=str(class_index)).inc(
+                    float(class_proba)
+                )
         except (
             ValueError,
             KeyError,

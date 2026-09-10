@@ -209,8 +209,11 @@ Répertoire UI: [app/ui](app/ui)
 ### Monitoring - Prometheus targets
 ![Prometheus Targets](reports/figures/prometheus-targets.png)
 
-### Monitoring - Grafana Dashboard
-![Grafana Dashboard](reports/figures/grafana-dashboard.png)
+### Monitoring - Grafana : service, qualité du modèle et réponses
+![Grafana Dashboard - service et réponses du modèle](reports/figures/grafana-dashboard-1.png)
+
+### Monitoring - Grafana : distribution des scores et exploitation
+![Grafana Dashboard - distribution des scores et exploitation](reports/figures/grafana-dashboard-2.png)
 
 ## Structure Du Dépôt
 

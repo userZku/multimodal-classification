@@ -83,13 +83,13 @@ Tous les services doivent afficher `Up`. Puis :
 curl http://localhost:8000/health
 ```
 
-Réponse attendue :
+Réponse attendue (le modèle de production est versionné dans le dépôt, `model_loaded` doit être `true` dès le premier lancement) :
 
 ```json
 {"status": "ok", "model_loaded": true, "model_version": "xgb-s2-...", "run_id": "..."}
 ```
 
-Si `model_loaded` vaut `false`, le modèle n'a pas encore été entraîné (premier lancement sur une machine neuve) : ouvre l'UI (étape suivante) et clique sur **« Relancer l'entraînement »**, ou lance directement :
+Si `model_loaded` vaut quand même `false` (ex. dossier `models/` supprimé localement), relance un entraînement :
 
 ```bash
 docker compose exec api python -m src.modeling.train

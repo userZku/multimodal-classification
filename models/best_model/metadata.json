@@ -1,0 +1,44 @@
+{
+  "model_name": "xgboost",
+  "scenario": "S2_sans_variable_sensible",
+  "trained_at": "2026-09-14T13:54:03.165043+00:00",
+  "features": [
+    "age",
+    "niveau_diplome",
+    "anciennete_poste_ans",
+    "code_rome_vise",
+    "est_allocataire",
+    "synthese_entretien",
+    "departement_insee"
+  ],
+  "metrics": {
+    "accuracy": 0.732,
+    "f1_macro": 0.705854255197116,
+    "recall_class_2": 0.5444444444444444,
+    "critical_2_to_0": 9,
+    "test_size": 500,
+    "confusion_matrix": [
+      [
+        147,
+        36,
+        4
+      ],
+      [
+        31,
+        170,
+        22
+      ],
+      [
+        9,
+        32,
+        49
+      ]
+    ]
+  },
+  "mlflow": {
+    "tracking_uri": "file:///C:/Users/a914487/Documents/multimodal-classification/mlruns",
+    "experiment_name": "multimodal-classification",
+    "experiment_id": "668211821380240328",
+    "run_id": "1e85bec0d7cb44569d9ac95f37116860"
+  }
+}

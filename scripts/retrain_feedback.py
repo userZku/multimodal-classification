@@ -399,7 +399,11 @@ def run_retrain_cycle(
     log_inputs = load_predict_log_inputs()
     feedback_df, joined_ids = join_feedbacks_to_features(unconsumed, log_inputs)
 
-    if not joined_ids and dataset_path is None:
+    is_bootstrap = not BEST_MODEL_PATH.exists()
+    if is_bootstrap:
+        logger.info("Aucun modèle en production : entraînement de bootstrap (garde-fous feedback ignorés).")
+
+    if not joined_ids and dataset_path is None and not is_bootstrap:
         reason = (
             "aucun nouveau feedback disponible et aucun dataset_path fourni : "
             "rien de nouveau à apprendre depuis le dernier entraînement"
@@ -427,7 +431,10 @@ def run_retrain_cycle(
     decision = decide_promotion(candidate_metrics, prod_metrics)
     logger.info(f"Décision brute: {'PROMU' if decision.promote else 'REJETÉ'}\n{decision.reason}")
 
-    decision = apply_sample_size_guard(decision, len(joined_ids))
+    if is_bootstrap:
+        logger.info("Bootstrap : garde-fou anti-bruit ignoré, un modèle vaut toujours mieux qu'aucun modèle.")
+    else:
+        decision = apply_sample_size_guard(decision, len(joined_ids))
     logger.info(f"Décision finale: {'PROMU' if decision.promote else 'REJETÉ'}\n{decision.reason}")
 
     if decision.promote:

@@ -34,7 +34,7 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - **Données & Préprocessing** : DEC-008, DEC-009, DEC-010, DEC-011, DEC-012, DEC-018, DEC-019
 - **Modélisation & Évaluation** : DEC-013, DEC-014, DEC-015, DEC-017, DEC-024
 - **Serving, MLOps & UI** : DEC-020, DEC-021, DEC-022, DEC-025
-- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028, DEC-029, DEC-030
+- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028, DEC-029, DEC-030, DEC-031
 
 ---
 
@@ -393,3 +393,15 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - Impact : Le bouton « Relancer l'entraînement » ne lance plus de cycle inutile sans confirmation explicite ; aucune promotion ne peut plus se produire avec moins de 20 feedbacks joints, même si `decide_promotion` l'aurait validée.
 - Risques / limites : Le seuil de 20 est un arbitrage assumé, non dérivé d'un calcul de puissance statistique formel ; le garde-fou «aucun feedback + pas de dataset_path» bloque aussi le cas rare d'un réentraînement forcé sans feedback ni changement de dataset (contournable via `dataset_path`).
 - Suivi / action : 4 tests dédiés (`tests/integration/test_feedback_integration.py`) couvrant le skip précoce et la rétrogradation de promotion (avec/sans franchissement du seuil).
+
+## DEC-031 - Versionner le modèle de production de base et corriger le deadlock de bootstrap
+- Date : 2026-09-14
+- Section notebook : 9.3
+- Statut : accepted
+- Contexte : `models/` était entièrement gitignoré, donc un `git clone` frais (nouvelle machine) n'a jamais de `model.joblib` : `/health` renvoie `model_loaded: false` et `/predict` échoue en 503 tant qu'un entraînement n'est pas lancé manuellement. Pire, testé en conditions réelles : sans modèle en production, `POST /retrain` sans feedback restait bloqué en rejet à cause du garde-fou DEC-030 (`apply_sample_size_guard`), qui ne distinguait pas « pas assez de feedbacks pour faire confiance à un delta » de « aucun modèle du tout, n'importe quel candidat est meilleur que rien » — un vrai deadlock (aucun modèle ne pouvait jamais être promu automatiquement).
+- Décision : (1) Exception ciblée dans `.gitignore` (`models/*` + `!models/best_model/model.joblib` + `!models/best_model/metadata.json`) pour versionner uniquement le modèle de production de base, tout en gardant ignorés l'historique de rollback, les backups et les autres sous-dossiers de `models/`. (2) Dans `run_retrain_cycle`, un cas `is_bootstrap` (aucun `model.joblib` présent) contourne à la fois le skip « pas de feedback » et `apply_sample_size_guard` : le premier candidat entraîné est promu sans condition.
+- Alternatives considérées : Script d'entraînement automatique au démarrage du conteneur `api` (écarté : n'aide pas l'exécution locale hors Docker, et le volume `./models` monté masquerait de toute façon un modèle éventuellement build dans l'image) ; ne rien versionner et documenter seulement l'étape d'entraînement manuel (écarté : n'aurait pas corrigé le deadlock du garde-fou, et complique l'expérience « nouveau PC » demandée explicitement).
+- Justification : Un artefact model.joblib de ~2,3 Mo est raisonnable à versionner pour un portfolio de démonstration ; ça garantit qu'un `git clone` + `docker compose up` fonctionne immédiatement, sans étape manuelle. Le contournement du garde-fou en bootstrap est logiquement sûr : comparer un candidat à « aucun modèle » n'est jamais un cas de bruit statistique, contrairement à comparer deux modèles entraînés.
+- Impact : Un `git clone` frais suivi de `docker compose up -d --build` a désormais un modèle chargé immédiatement (`model_loaded: true`). Le bouton retrain ne peut plus rester bloqué indéfiniment faute de modèle initial.
+- Risques / limites : Le modèle versionné se désynchronise du code au fil des commits (il faut re-committer après un réentraînement volontaire du baseline) ; c'est un compromis assumé pour un dépôt de démonstration, pas une pratique recommandée pour un vrai registre de modèles en production (cf. limite déjà notée en section 7 de `docs/architecture_si/architecture-si.md`).
+- Suivi / action : Test dédié `test_bootstrap_promotes_without_feedback_when_no_production_model` ; scénario validé en conditions réelles (suppression puis re-création de `models/`, test de `/retrain` à froid).

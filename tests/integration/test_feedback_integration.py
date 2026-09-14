@@ -141,6 +141,24 @@ class TestFeedbackLoopIntegration:
         guarded = retrain_feedback.apply_sample_size_guard(rejected, joined_count=0)
         assert guarded is rejected
 
+    def test_bootstrap_promotes_without_feedback_when_no_production_model(
+        self, tmp_path, monkeypatch
+    ):
+        """Sans modèle en production, le premier candidat est promu même sans feedback ni seuil atteint."""
+        empty_log_path = tmp_path / "empty_predict_log.jsonl"
+        monkeypatch.setattr(retrain_feedback, "PREDICT_LOG_PATH", empty_log_path)
+        monkeypatch.setattr(retrain_feedback.FeedbackStore, "load_unconsumed", lambda self: [])
+        monkeypatch.setattr(retrain_feedback, "BEST_MODEL_PATH", tmp_path / "no_model_here.joblib")
+        monkeypatch.setattr(retrain_feedback, "BEST_MODEL_DIR", tmp_path)
+        monkeypatch.setattr(retrain_feedback, "BEST_MODEL_METADATA_PATH", tmp_path / "metadata.json")
+        monkeypatch.setattr(retrain_feedback, "MODEL_HISTORY_DIR", tmp_path / "history")
+
+        result = retrain_feedback.run_retrain_cycle(
+            min_feedback=0, dataset_path=None, trigger="test_bootstrap"
+        )
+        assert result["status"] == "promoted"
+        assert (tmp_path / "no_model_here.joblib").exists()
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

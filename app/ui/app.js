@@ -35,6 +35,7 @@ const historyEmpty = document.getElementById("history-empty");
 const refreshHistoryButton = document.getElementById("refresh-history");
 const retrainButton = document.getElementById("retrain-button");
 const rollbackButton = document.getElementById("rollback-button");
+const retrainResultClose = document.getElementById("retrain-result-close");
 const retrainResult = document.getElementById("retrain-result");
 const retrainBadge = document.getElementById("retrain-badge");
 const retrainVersion = document.getElementById("retrain-version");
@@ -341,6 +342,10 @@ retrainButton.addEventListener("click", () => {
 
 rollbackButton.addEventListener("click", () => {
   triggerRollback();
+});
+
+retrainResultClose.addEventListener("click", () => {
+  retrainResult.classList.add("hidden");
 });
 
 hydrateForm(examplePayload);

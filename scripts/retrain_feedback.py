@@ -179,7 +179,7 @@ def _archive_current_model(reason: str) -> str:
     les entrées les plus anciennes au-delà de `MODEL_HISTORY_LIMIT`.
     """
     MODEL_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%S%fZ") + f"_{uuid4().hex[:6]}"
 
     joblib.dump(joblib.load(BEST_MODEL_PATH), MODEL_HISTORY_DIR / f"model_{timestamp}.joblib")
 

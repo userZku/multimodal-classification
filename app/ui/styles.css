@@ -306,6 +306,23 @@ a {
   margin-bottom: 6px;
 }
 
+.retrain-result-close {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.retrain-result-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .retrain-badge {
   font-family: var(--mono);
   font-size: 0.72rem;

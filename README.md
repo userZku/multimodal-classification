@@ -169,6 +169,8 @@ Implémentation: [src/api/main.py](src/api/main.py)
 | POST /feedback | annotation vérité terrain | 201 stocké / 409 conflit / 422 label invalide |
 | GET /feedback/count | pilotage du trigger de réentraînement | total + non consommés |
 | GET /feedback/health | santé de la collecte de feedback | statut + compteurs |
+| GET /models/history | snapshots de modèle archivées | liste horodatée + métriques |
+| POST /rollback | restaure une snapshot archivée | status, timestamp restauré, métriques |
 
 Implémentation boucle de feedback: [src/api/feedback_store.py](src/api/feedback_store.py) (SQLite) · [scripts/retrain_feedback.py](scripts/retrain_feedback.py) (réentraînement) · [scripts/promotion.py](scripts/promotion.py) (décision testable) · [docs/runbooks/decision-log.md](docs/runbooks/decision-log.md) (DEC-027/028, politique écrite) · [docs/FEEDBACK_LOOP.md](docs/FEEDBACK_LOOP.md) (guide complet).
 

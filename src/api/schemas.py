@@ -73,6 +73,34 @@ class HealthResponse(BaseModel):
     run_id: str | None = None
 
 
+class RollbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timestamp: str | None = Field(
+        default=None,
+        description="Timestamp de la snapshot à restaurer (défaut: la plus récente)",
+    )
+
+
+class RollbackResponse(BaseModel):
+    status: str
+    restored_timestamp: str
+    metrics: dict
+
+
+class ModelHistoryEntry(BaseModel):
+    timestamp: str
+    trained_at: str | None = None
+    archived_at: str | None = None
+    archive_reason: str | None = None
+    metrics: dict
+
+
+class ModelHistoryResponse(BaseModel):
+    count: int
+    items: list[ModelHistoryEntry]
+
+
 class FeedbackRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",

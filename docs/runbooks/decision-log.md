@@ -34,7 +34,7 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - **Données & Préprocessing** : DEC-008, DEC-009, DEC-010, DEC-011, DEC-012, DEC-018, DEC-019
 - **Modélisation & Évaluation** : DEC-013, DEC-014, DEC-015, DEC-017, DEC-024
 - **Serving, MLOps & UI** : DEC-020, DEC-021, DEC-022, DEC-025
-- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028
+- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028, DEC-029
 
 ---
 
@@ -369,3 +369,15 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - Impact : Chaque exécution de `retrain_feedback.py` se termine par une décision tracée (promue ou rejetée) et journalisée dans `logs/retraining/`, jamais par un échec silencieux (`exit 0` dans les deux cas, `exit 1` réservé aux vraies erreurs).
 - Risques / limites : Les seuils de tolérance (0,5 % / 1 %) sont des arbitrages assumés à réévaluer après les premiers cycles réels de réentraînement ; ils ne sont pas dérivés d'une analyse coût/bénéfice chiffrée en euros à ce stade.
 - Suivi / action : Politique documentée et défendue dans cette fiche (DEC-028) ; 6 tests unitaires dédiés (`tests/test_feedback_loop.py::TestPromotionPolicy`) couvrant les cas gain net, régression critique, candidat identique et candidat pire partout.
+
+## DEC-029 - Historiser les modèles promus et exposer un rollback
+- Date : 2026-09-14
+- Section notebook : 9.3
+- Statut : accepted
+- Contexte : Le mécanisme initial de promotion écrasait `model_previous.joblib` à chaque nouvelle promotion, sans historique multi-versions ni moyen de revenir en arrière au-delà d'une seule génération, et sans endpoint pour le faire.
+- Décision : Remplacer le backup unique par un historique horodaté dans `models/best_model/history/` (`model_<timestamp>.joblib` + `metadata_<timestamp>.json`), borné à 10 snapshots (`MODEL_HISTORY_LIMIT`, purge des plus anciennes). Ajouter `rollback_model()` (`scripts/retrain_feedback.py`), qui archive l'état courant avant de restaurer une snapshot (rollback annulable par un nouveau rollback ciblé). Exposer `GET /models/history` et `POST /rollback` sur l'API, plus un bouton « Rollback modèle » dans l'UI.
+- Alternatives considérées : Conserver un unique `model_previous.joblib` (écarté : perte définitive au-delà d'une génération) ; historique illimité sans purge (écarté : croissance disque non maîtrisée).
+- Justification : Une promotion automatisée doit rester réversible en production ; un historique borné offre un compromis simple entre traçabilité et gestion de l'espace disque.
+- Impact : `POST /rollback` restaure la snapshot la plus récente (ou une précise via `timestamp`) et recharge l'API sans interruption ; équivalent CLI `python scripts/retrain_feedback.py --rollback`.
+- Risques / limites : L'historique vit sur le même volume que `models/best_model/` (pas de réplication externe) ; en Docker, le conteneur `api` doit recharger (`/rollback` le fait, mais un rollback déclenché hors API ne recharge pas automatiquement, même limite que DEC-027).
+- Suivi / action : 7 tests dédiés (`tests/test_model_rollback.py`) sur environnement isolé (tmp_path), sans impacter le modèle réel en production.

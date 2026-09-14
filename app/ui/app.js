@@ -35,6 +35,7 @@ const historyEmpty = document.getElementById("history-empty");
 const refreshHistoryButton = document.getElementById("refresh-history");
 const retrainButton = document.getElementById("retrain-button");
 const retrainFeedback = document.getElementById("retrain-feedback");
+const rollbackButton = document.getElementById("rollback-button");
 
 function normalizeRomeCode(value) {
   return (value || "").trim().toUpperCase();
@@ -187,6 +188,36 @@ async function loadHistory() {
   }
 }
 
+async function triggerRollback() {
+  if (!confirm("Restaurer la snapshot de modèle la plus récente ? Le modèle courant sera lui-même archivé avant.")) {
+    return;
+  }
+  rollbackButton.disabled = true;
+  retrainFeedback.classList.remove("hidden");
+  retrainFeedback.textContent = "Rollback en cours...";
+
+  try {
+    const response = await fetch("/rollback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      retrainFeedback.textContent = data.detail || "Échec du rollback";
+      return;
+    }
+
+    retrainFeedback.textContent = `Rollback OK — snapshot ${data.restored_timestamp} restaurée`;
+    await loadHealth();
+  } catch (error) {
+    retrainFeedback.textContent = "Erreur de connexion rollback";
+  } finally {
+    rollbackButton.disabled = false;
+  }
+}
+
 async function triggerRetrain() {
   retrainButton.disabled = true;
   retrainFeedback.classList.remove("hidden");
@@ -270,6 +301,10 @@ refreshHistoryButton.addEventListener("click", () => {
 
 retrainButton.addEventListener("click", () => {
   triggerRetrain();
+});
+
+rollbackButton.addEventListener("click", () => {
+  triggerRollback();
 });
 
 hydrateForm(examplePayload);

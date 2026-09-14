@@ -38,14 +38,17 @@ from src.config import (
 )
 from src.features.preprocessing import build_model_frame
 from src.api.feedback_store import FeedbackStore
-from scripts.retrain_feedback import run_retrain_cycle
+from scripts.retrain_feedback import list_model_history, rollback_model, run_retrain_cycle
 from src.api.schemas import (
     FeedbackCountResponse,
     FeedbackRequest,
     FeedbackResponse,
     HealthResponse,
+    ModelHistoryResponse,
     PredictRequest,
     PredictResponse,
+    RollbackRequest,
+    RollbackResponse,
     TrainRequest,
     TrainResponse,
 )
@@ -440,6 +443,40 @@ def retrain(payload: TrainRequest) -> TrainResponse:
         run_id=result.get("mlflow_run_id"),
         metrics=result.get("candidate_metrics", {}),
         reason=result.get("reason"),
+    )
+
+
+@app.get("/models/history", response_model=ModelHistoryResponse)
+def models_history() -> ModelHistoryResponse:
+    items = list_model_history()
+    return ModelHistoryResponse(count=len(items), items=items)
+
+
+@app.post("/rollback", response_model=RollbackResponse)
+def rollback(payload: RollbackRequest) -> RollbackResponse:
+    try:
+        info = rollback_model(payload.timestamp)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    reload_artifacts()
+    train_logger.info(
+        json.dumps(
+            {
+                "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
+                "status": "ok",
+                "outcome": "rolled_back",
+                "restored_timestamp": info["restored_timestamp"],
+                "model_version": model_version(),
+            },
+            ensure_ascii=False,
+        )
+    )
+
+    return RollbackResponse(
+        status="rolled_back",
+        restored_timestamp=info["restored_timestamp"],
+        metrics=info["metrics"],
     )
 
 

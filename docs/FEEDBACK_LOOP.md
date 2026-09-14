@@ -276,6 +276,33 @@ print(f"Raison:\n{decision.reason}")
 # Résultat : PROMU (recall gagne +1.14%, f1 perd -0.68% mais dans la tolérance)
 ```
 
+### Historique et rollback
+
+Chaque promotion **archive** le modèle qu'elle remplace dans
+`models/best_model/history/` (`model_<timestamp>.joblib` +
+`metadata_<timestamp>.json`), borné aux `MODEL_HISTORY_LIMIT` (10) snapshots
+les plus récentes. Un rollback archive lui-même l'état courant avant de
+restaurer une snapshot — un rollback peut donc être annulé (roll-forward) en
+rappelant la commande avec le timestamp voulu.
+
+```bash
+# Lister les snapshots disponibles
+curl http://localhost:8000/models/history
+
+# Revenir à la snapshot la plus récente
+curl -X POST http://localhost:8000/rollback -H "Content-Type: application/json" -d "{}"
+
+# Revenir à une snapshot précise
+curl -X POST http://localhost:8000/rollback -H "Content-Type: application/json" -d "{\"timestamp\": \"20260914T120000123456Z\"}"
+
+# Équivalent en CLI (hors API)
+python scripts/retrain_feedback.py --rollback
+python scripts/retrain_feedback.py --rollback 20260914T120000123456Z
+```
+
+Un bouton **"Rollback modèle"** dans l'UI (`app/ui`) appelle `POST /rollback`
+(confirmation requise, restaure la snapshot la plus récente).
+
 ---
 
 ## 6. Tests

@@ -167,14 +167,118 @@ def evaluate_model(pipeline, reference_set: pd.DataFrame, model_name: str) -> di
     return {"f1_macro": float(f1_macro), "recall_class_2": float(recall_class_2)}
 
 
+MODEL_HISTORY_DIR = BEST_MODEL_DIR / "history"
+MODEL_HISTORY_LIMIT = 10
+
+
+def _archive_current_model(reason: str) -> str:
+    """Copie le modèle en production courant dans l'historique horodaté.
+
+    Retourne le timestamp utilisé comme identifiant de la snapshot. Purge
+    les entrées les plus anciennes au-delà de `MODEL_HISTORY_LIMIT`.
+    """
+    MODEL_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+
+    joblib.dump(joblib.load(BEST_MODEL_PATH), MODEL_HISTORY_DIR / f"model_{timestamp}.joblib")
+
+    current_metadata = {}
+    if BEST_MODEL_METADATA_PATH.exists():
+        current_metadata = json.loads(BEST_MODEL_METADATA_PATH.read_text(encoding="utf-8"))
+    current_metadata["archived_at"] = datetime.now(tz=timezone.utc).isoformat()
+    current_metadata["archive_reason"] = reason
+    (MODEL_HISTORY_DIR / f"metadata_{timestamp}.json").write_text(
+        json.dumps(current_metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    logger.info(f"Modèle en production archivé: history/model_{timestamp}.joblib ({reason})")
+
+    _prune_model_history()
+    return timestamp
+
+
+def _prune_model_history() -> None:
+    """Ne garde que les MODEL_HISTORY_LIMIT snapshots les plus récentes."""
+    snapshots = sorted(MODEL_HISTORY_DIR.glob("model_*.joblib"))
+    excess = len(snapshots) - MODEL_HISTORY_LIMIT
+    for old_snapshot in snapshots[:max(excess, 0)]:
+        timestamp = old_snapshot.stem.removeprefix("model_")
+        old_snapshot.unlink(missing_ok=True)
+        (MODEL_HISTORY_DIR / f"metadata_{timestamp}.json").unlink(missing_ok=True)
+
+
+def list_model_history() -> list[dict]:
+    """Liste les snapshots archivées, la plus récente en premier."""
+    if not MODEL_HISTORY_DIR.exists():
+        return []
+
+    entries = []
+    for snapshot in sorted(MODEL_HISTORY_DIR.glob("model_*.joblib"), reverse=True):
+        timestamp = snapshot.stem.removeprefix("model_")
+        metadata_path = MODEL_HISTORY_DIR / f"metadata_{timestamp}.json"
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.exists() else {}
+        entries.append(
+            {
+                "timestamp": timestamp,
+                "trained_at": metadata.get("trained_at"),
+                "archived_at": metadata.get("archived_at"),
+                "archive_reason": metadata.get("archive_reason"),
+                "metrics": metadata.get("metrics", {}),
+            }
+        )
+    return entries
+
+
+def rollback_model(timestamp: str | None = None) -> dict:
+    """Restaure une snapshot archivée comme modèle de production.
+
+    Sans `timestamp`, restaure la snapshot la plus récente (rollback d'un
+    cran). Le modèle actuellement en production est lui-même archivé avant
+    la restauration, ce qui permet d'annuler un rollback (roll-forward) en
+    rappelant cette fonction avec le timestamp voulu.
+
+    Lève `FileNotFoundError` si aucune snapshot n'est disponible (ou si le
+    `timestamp` demandé n'existe pas).
+    """
+    history = list_model_history()
+    if not history:
+        raise FileNotFoundError("Aucune snapshot disponible dans models/best_model/history/")
+
+    target = history[0] if timestamp is None else next(
+        (entry for entry in history if entry["timestamp"] == timestamp), None
+    )
+    if target is None:
+        raise FileNotFoundError(f"Snapshot introuvable: {timestamp}")
+
+    if BEST_MODEL_PATH.exists():
+        _archive_current_model(reason="superseded_by_rollback")
+
+    snapshot_path = MODEL_HISTORY_DIR / f"model_{target['timestamp']}.joblib"
+    metadata_path = MODEL_HISTORY_DIR / f"metadata_{target['timestamp']}.json"
+
+    joblib.dump(joblib.load(snapshot_path), BEST_MODEL_PATH)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["rolled_back_at"] = datetime.now(tz=timezone.utc).isoformat()
+    metadata["rolled_back_from_timestamp"] = target["timestamp"]
+    BEST_MODEL_METADATA_PATH.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    logger.info(f"Rollback effectué vers la snapshot {target['timestamp']}")
+    return {"restored_timestamp": target["timestamp"], "metrics": target["metrics"]}
+
+
 def promote_candidate(pipeline, feature_columns: list[str], metrics: dict) -> None:
-    """Remplace le modèle en production par le candidat promu."""
+    """Remplace le modèle en production par le candidat promu.
+
+    Le modèle actuellement en production (s'il existe) est archivé dans
+    `models/best_model/history/` sous un nom horodaté avant d'être écrasé,
+    ce qui permet un rollback ultérieur (cf. `rollback_model`). L'historique
+    est borné à `MODEL_HISTORY_LIMIT` entrées pour éviter une croissance
+    disque illimitée.
+    """
     BEST_MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
     if BEST_MODEL_PATH.exists():
-        backup_path = BEST_MODEL_DIR / "model_previous.joblib"
-        joblib.dump(joblib.load(BEST_MODEL_PATH), backup_path)
-        logger.info(f"Ancien modèle sauvegardé: {backup_path}")
+        _archive_current_model(reason="superseded_by_promotion")
 
     joblib.dump(pipeline, BEST_MODEL_PATH)
 
@@ -347,6 +451,24 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Réentraînement automatique avec feedbacks")
     parser.add_argument("--min-feedback", type=int, default=200)
+    parser.add_argument(
+        "--rollback",
+        nargs="?",
+        const="__latest__",
+        default=None,
+        metavar="TIMESTAMP",
+        help="Restaure une snapshot archivée (la plus récente si aucun timestamp fourni)",
+    )
     args = parser.parse_args()
+
+    if args.rollback is not None:
+        target = None if args.rollback == "__latest__" else args.rollback
+        try:
+            info = rollback_model(target)
+            print(json.dumps(info, indent=2, ensure_ascii=False))
+            raise SystemExit(0)
+        except FileNotFoundError as exc:
+            logger.error(f"Rollback impossible: {exc}")
+            raise SystemExit(1)
 
     raise SystemExit(retrain_with_feedbacks(min_feedback=args.min_feedback))

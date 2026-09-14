@@ -34,7 +34,7 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - **Données & Préprocessing** : DEC-008, DEC-009, DEC-010, DEC-011, DEC-012, DEC-018, DEC-019
 - **Modélisation & Évaluation** : DEC-013, DEC-014, DEC-015, DEC-017, DEC-024
 - **Serving, MLOps & UI** : DEC-020, DEC-021, DEC-022, DEC-025
-- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028, DEC-029
+- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028, DEC-029, DEC-030
 
 ---
 
@@ -381,3 +381,15 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - Impact : `POST /rollback` restaure la snapshot la plus récente (ou une précise via `timestamp`) et recharge l'API sans interruption ; équivalent CLI `python scripts/retrain_feedback.py --rollback`.
 - Risques / limites : L'historique vit sur le même volume que `models/best_model/` (pas de réplication externe) ; en Docker, le conteneur `api` doit recharger (`/rollback` le fait, mais un rollback déclenché hors API ne recharge pas automatiquement, même limite que DEC-027).
 - Suivi / action : 7 tests dédiés (`tests/test_model_rollback.py`) sur environnement isolé (tmp_path), sans impacter le modèle réel en production.
+
+## DEC-030 - Empêcher un réentraînement inutile et une promotion sur bruit statistique
+- Date : 2026-09-14
+- Section notebook : 9.3
+- Statut : accepted
+- Contexte : `POST /retrain` (bouton UI) contournait volontairement le seuil de 200 feedbacks du cron (`min_feedback=0`), mais entraînait donc systématiquement un candidat même avec 0 nouveau feedback. Trois exécutions réelles en séance (0, 7 puis 14 feedbacks joints) ont toutes été rejetées, avec des deltas de `recall_class_2` (-0.0111, -0.0333, -0.0556) du même ordre de grandeur que le bruit attendu sur un `reference_set` de 500 lignes (~18 échantillons de classe 2 seulement, donc chaque prédiction qui bascule déplace la métrique de ~5,5 points).
+- Décision : Deux garde-fous ajoutés dans `run_retrain_cycle` (`scripts/retrain_feedback.py`) : (1) le cycle est ignoré (`status: skipped`) sans même entraîner de candidat si aucun feedback n'a pu être joint **et** qu'aucun `dataset_path` n'est fourni ; (2) `apply_sample_size_guard()` rétrograde automatiquement une promotion en rejet si moins de `MIN_FEEDBACK_FOR_PROMOTION` (20) feedbacks ont été joints, quel que soit le verdict de `decide_promotion`. Côté UI, un `confirm()` préalable avertit l'utilisateur si `GET /feedback/count` renvoie `new: 0` avant même d'appeler `/retrain`.
+- Alternatives considérées : Appliquer le seuil de 200 aussi au déclenchement manuel (écarté : empêche toute démonstration/test rapide) ; grossir le `reference_set` pour réduire le bruit (écarté pour l'instant : dévierait du split figé de la section 4.1 du notebook) ; augmenter la tolérance de `decide_promotion` (écarté seul : ne résout pas le problème de fond, un seuil sur l'échantillon est plus honnête qu'une tolérance plus large).
+- Justification : Un delta de métrique mesuré sur une poignée de feedbacks et un `reference_set` à faible effectif de classe critique ne constitue pas un signal fiable ; mieux vaut rejeter par prudence que promouvoir sur du bruit.
+- Impact : Le bouton « Relancer l'entraînement » ne lance plus de cycle inutile sans confirmation explicite ; aucune promotion ne peut plus se produire avec moins de 20 feedbacks joints, même si `decide_promotion` l'aurait validée.
+- Risques / limites : Le seuil de 20 est un arbitrage assumé, non dérivé d'un calcul de puissance statistique formel ; le garde-fou «aucun feedback + pas de dataset_path» bloque aussi le cas rare d'un réentraînement forcé sans feedback ni changement de dataset (contournable via `dataset_path`).
+- Suivi / action : 4 tests dédiés (`tests/integration/test_feedback_integration.py`) couvrant le skip précoce et la rétrogradation de promotion (avec/sans franchissement du seuil).

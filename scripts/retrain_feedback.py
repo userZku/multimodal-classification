@@ -47,7 +47,7 @@ from src.config import (
 from src.features.preprocessing import build_model_frame
 from src.modeling.train import build_training_pipeline, load_training_data
 from src.api.feedback_store import FeedbackStore
-from scripts.promotion import decide_promotion
+from scripts.promotion import PromotionDecision, decide_promotion
 
 LOG_DIR = PROJECT_ROOT / "logs" / "retraining"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -169,6 +169,7 @@ def evaluate_model(pipeline, reference_set: pd.DataFrame, model_name: str) -> di
 
 MODEL_HISTORY_DIR = BEST_MODEL_DIR / "history"
 MODEL_HISTORY_LIMIT = 10
+MIN_FEEDBACK_FOR_PROMOTION = 20
 
 
 def _archive_current_model(reason: str) -> str:
@@ -337,6 +338,29 @@ def _log_mlflow_retrain_run(
         return None
 
 
+def apply_sample_size_guard(decision: PromotionDecision, joined_count: int) -> PromotionDecision:
+    """Rétrograde une promotion en rejet si trop peu de feedbacks l'appuient.
+
+    Avec peu de feedbacks joints, un delta de métriques (recall_class_2
+    mesuré sur ~18 échantillons de classe 2 dans le reference_set) reflète
+    surtout le bruit d'échantillonnage/entraînement plutôt qu'un vrai signal
+    apporté par les feedbacks. On ne fait confiance à une promotion qu'au-delà
+    de MIN_FEEDBACK_FOR_PROMOTION feedbacks joints.
+    """
+    if not decision.promote or joined_count >= MIN_FEEDBACK_FOR_PROMOTION:
+        return decision
+
+    return PromotionDecision(
+        promote=False,
+        reason=(
+            f"{decision.reason}\n"
+            f"⚠ Promotion annulée par prudence : seulement {joined_count} feedback(s) joint(s) "
+            f"< {MIN_FEEDBACK_FOR_PROMOTION} requis pour faire confiance à ce delta de métriques "
+            f"(risque de bruit statistique/non-déterminisme d'entraînement, pas un vrai signal)."
+        ),
+    )
+
+
 def run_retrain_cycle(
     min_feedback: int = 0,
     dataset_path: str | None = None,
@@ -375,16 +399,19 @@ def run_retrain_cycle(
     log_inputs = load_predict_log_inputs()
     feedback_df, joined_ids = join_feedbacks_to_features(unconsumed, log_inputs)
 
-    if min_feedback > 0 and not joined_ids:
-        reason = "aucun feedback n'a pu être joint à une prédiction loguée"
-        logger.warning(f"SKIP: {reason}.")
+    if not joined_ids and dataset_path is None:
+        reason = (
+            "aucun nouveau feedback disponible et aucun dataset_path fourni : "
+            "rien de nouveau à apprendre depuis le dernier entraînement"
+        )
+        logger.info(f"SKIP: {reason}.")
         return {"status": "skipped", "event_id": event_id, "feedbacks_joined": 0, "reason": reason}
 
     if joined_ids:
         logger.info(f"{len(joined_ids)}/{len(unconsumed)} feedbacks joints avec succès")
         training_df = pd.concat([training_base, feedback_df], ignore_index=True, sort=False)
     else:
-        logger.info("Aucun feedback disponible — entraînement sur l'historique seul.")
+        logger.info("Aucun feedback disponible — entraînement sur l'historique seul (dataset_path fourni).")
         training_df = training_base
 
     candidate, feature_columns = train_candidate(training_df)
@@ -398,7 +425,10 @@ def run_retrain_cycle(
         prod_metrics = {"f1_macro": 0.0, "recall_class_2": 0.0}
 
     decision = decide_promotion(candidate_metrics, prod_metrics)
-    logger.info(f"Décision: {'PROMU' if decision.promote else 'REJETÉ'}\n{decision.reason}")
+    logger.info(f"Décision brute: {'PROMU' if decision.promote else 'REJETÉ'}\n{decision.reason}")
+
+    decision = apply_sample_size_guard(decision, len(joined_ids))
+    logger.info(f"Décision finale: {'PROMU' if decision.promote else 'REJETÉ'}\n{decision.reason}")
 
     if decision.promote:
         promote_candidate(candidate, feature_columns, candidate_metrics)

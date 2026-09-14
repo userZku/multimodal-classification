@@ -104,6 +104,43 @@ class TestFeedbackLoopIntegration:
         assert len(ref1) == len(ref2)
         assert list(ref1.columns) == list(ref2.columns)
 
+    def test_run_retrain_cycle_skips_without_feedback_or_dataset(self, tmp_path, monkeypatch):
+        """Un déclenchement manuel sans nouveau feedback ni dataset_path est ignoré (pas d'entraînement inutile)."""
+        empty_log_path = tmp_path / "empty_predict_log.jsonl"
+        monkeypatch.setattr(retrain_feedback, "PREDICT_LOG_PATH", empty_log_path)
+        monkeypatch.setattr(
+            retrain_feedback.FeedbackStore, "load_unconsumed", lambda self: []
+        )
+
+        result = retrain_feedback.run_retrain_cycle(
+            min_feedback=0, dataset_path=None, trigger="test_no_feedback"
+        )
+        assert result["status"] == "skipped"
+        assert "aucun nouveau feedback" in result["reason"]
+
+    def test_sample_size_guard_downgrades_promotion_below_threshold(self):
+        """Une promotion est rétrogradée en rejet si trop peu de feedbacks l'appuient (bruit statistique)."""
+        from scripts.promotion import PromotionDecision
+
+        would_promote = PromotionDecision(promote=True, reason="✓ recall_class_2: gain\n→ PROMU")
+
+        guarded = retrain_feedback.apply_sample_size_guard(would_promote, joined_count=5)
+        assert guarded.promote is False
+        assert "Promotion annulée par prudence" in guarded.reason
+
+        not_guarded = retrain_feedback.apply_sample_size_guard(
+            would_promote, joined_count=retrain_feedback.MIN_FEEDBACK_FOR_PROMOTION
+        )
+        assert not_guarded.promote is True
+
+    def test_sample_size_guard_leaves_rejection_untouched(self):
+        """Un rejet reste un rejet quel que soit le nombre de feedbacks joints."""
+        from scripts.promotion import PromotionDecision
+
+        rejected = PromotionDecision(promote=False, reason="→ REJETÉ")
+        guarded = retrain_feedback.apply_sample_size_guard(rejected, joined_count=0)
+        assert guarded is rejected
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

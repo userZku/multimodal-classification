@@ -1,13 +1,12 @@
 """Tests de l'historique de modèles et du rollback."""
 
-import shutil
+import json
 
 import joblib
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.config import BEST_MODEL_DIR, BEST_MODEL_METADATA_PATH, BEST_MODEL_PATH
 from scripts.retrain_feedback import (
     MODEL_HISTORY_DIR,
     list_model_history,
@@ -19,13 +18,15 @@ client = TestClient(app)
 
 @pytest.fixture
 def isolated_model_dir(tmp_path, monkeypatch):
-    """Copie le modèle réel dans un répertoire jetable pour ne pas polluer models/best_model."""
+    """Modèle factice dans un répertoire jetable (aucune dépendance à un artefact entraîné)."""
     fake_dir = tmp_path / "best_model"
     fake_dir.mkdir()
     fake_model_path = fake_dir / "model.joblib"
     fake_metadata_path = fake_dir / "metadata.json"
-    shutil.copy(BEST_MODEL_PATH, fake_model_path)
-    shutil.copy(BEST_MODEL_METADATA_PATH, fake_metadata_path)
+    joblib.dump({"fake": "model"}, fake_model_path)
+    fake_metadata_path.write_text(
+        json.dumps({"trained_at": "test", "metrics": {"f1_macro": 0.5}}), encoding="utf-8"
+    )
 
     import scripts.retrain_feedback as rf
 

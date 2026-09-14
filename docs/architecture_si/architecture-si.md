@@ -14,13 +14,15 @@ Périmètre couvert:
 
 | Composant | Rôle | Emplacement |
 |---|---|---|
-| Service API | Exposer /health, /predict, /retrain, /history, /metrics et UI statique | src/api/main.py |
+| Service API | Exposer /health, /predict, /retrain, /history, /metrics, /feedback* et UI statique | src/api/main.py |
 | UI statique | Formulaire de prédiction et appel API | app/ui |
 | Préprocessing | Feature engineering + préparation frame modèle | src/features/preprocessing.py |
 | Entraînement | Construction pipeline XGBoost + export artefacts | src/modeling/train.py |
 | Artefacts modèle | Pipeline joblib + metadata JSON | models/best_model |
-| Tracking ML | Serveur MLflow, historique des runs, métriques et artefacts | service `mlflow`, mlruns |
-| Logs applicatifs | Journaux JSONL inférence et retrain | logs/inference |
+| Feedback | Stockage SQLite des annotations terrain (`request_id`, `true_label`, `used_for_training`) | src/api/feedback_store.py, data/feedbacks.db |
+| Réentraînement | Jointure feedbacks/logs, candidat, comparaison, décision de promotion | scripts/retrain_feedback.py, scripts/promotion.py |
+| Tracking ML | Serveur MLflow, historique des runs (entraînement initial et retrain), métriques et artefacts | service `mlflow`, mlruns |
+| Logs applicatifs | Journaux JSONL inférence et retrain | logs/inference, logs/retraining |
 | Monitoring | Scrape métriques + dashboards | infra/compose/prometheus, infra/compose/grafana |
 
 ## 3. Flux fonctionnels
@@ -46,6 +48,14 @@ Périmètre couvert:
 2. Scrape Prometheus.
 3. Visualisation dashboard Grafana.
 
+### 3.4 Boucle de feedback et réentraînement
+1. Un expert envoie `POST /feedback` (`request_id`, `true_label`) ; le `request_id` doit correspondre à une prédiction déjà loguée (404 sinon), un conflit de label renvoie 409.
+2. Déclenchement périodique (cron `infra/cron/retrain.crontab` / service Docker `retrain-cron`, toutes les 6h, sous condition d'un seuil de feedbacks non consommés) ou manuel (`POST /retrain`, sans seuil).
+3. Jointure des feedbacks avec leurs features via les logs `/predict`, entraînement d'un candidat sur l'historique enrichi.
+4. Évaluation candidat et production sur le même `reference_set` figé (jamais utilisé à l'entraînement).
+5. `decide_promotion()` tranche selon `recall_class_2` (métrique critique) et `f1_macro` (garde-fou tolérant) ; la décision est toujours journalisée (fichier + run MLflow), promue ou rejetée.
+6. Si promu, le modèle en production est remplacé (l'ancien est sauvegardé) ; sinon rien ne change.
+
 ## 4. Vue d'architecture (logique)
 
 ```mermaid
@@ -60,6 +70,14 @@ flowchart LR
   H --> I[Prometheus]
   I --> J[Grafana]
   E --> K[Logs inference JSONL]
+  E --> L[Endpoint feedback]
+  L --> M[(SQLite feedbacks.db)]
+  M --> N[Trigger: cron 6h ou POST /retrain manuel]
+  K -.jointure request_id.-> N
+  N --> O[run_retrain_cycle: candidat vs production]
+  O --> D
+  O -- promu --> C
+  O -- rejete --> P[Log decision, modele inchange]
 ```
 
 ## 5. Contraintes et choix d'architecture
@@ -85,13 +103,15 @@ Mesures minimales recommandées avant exposition externe:
 ## 7. Limites connues
 - stockage MLflow en file store local (adapté démo, limité pour prod multi-utilisateur);
 - dépendance à l'état local des artefacts pour certains tests;
-- absence de mécanisme de promotion de modèle (staging/production).
+- la jointure feedbacks ↔ features repose sur les logs JSONL de `/predict` : un feedback dont la prédiction n'est plus loguée (rotation/purge des logs) ne peut plus être exploité au retrain;
+- en Docker, le conteneur `api` ne recharge pas automatiquement un modèle promu par `retrain-cron` (nécessite un redémarrage du conteneur ou un appel `/retrain`), faute de watcher de fichier ou de signal inter-conteneurs.
 
 ## 8. Roadmap architecture
 1. Migrer MLflow vers backend SQL (sqlite minimum, puis serveur dédié).
-2. Ajouter un modèle de déploiement avec registre et versioning promu.
+2. ~~Ajouter un modèle de déploiement avec registre et versioning promu.~~ Fait : `scripts/promotion.py::decide_promotion` + `run_retrain_cycle`, cf. section 3.4.
 3. Introduire authn/authz et observabilité sécurité.
 4. Industrialiser tests d'intégration API + UI en CI.
+5. Rechargement automatique du modèle côté API après une promotion effectuée par un conteneur tiers (`retrain-cron`).
 
 ## 9. Cartographie SI cible (intégration métier)
 
@@ -100,7 +120,7 @@ Mesures minimales recommandées avant exposition externe:
 2. **Service IA** renvoie la prédiction, la confiance et un `request_id` de traçabilité.
 3. **Référentiel national des usagers** (base transactionnelle) conserve les données métier et l'historique de suivi administratif.
 4. **Service IA** journalise les entrées/sorties d'inférence (logs JSONL) pour audit technique.
-5. **Boucle de correction**: les retours métier alimentent le POST `/retrain` pour relancer un entraînement monitoré.
+5. **Boucle de correction**: les retours métier sont saisis via `POST /feedback` (rattachés au `request_id` de la prédiction initiale) ; un cycle périodique ou déclenché via `POST /retrain` en tire un modèle candidat, promu uniquement s'il ne dégrade pas la détection de la classe critique.
 
 ### 9.2 Frontières de responsabilité
 - Guichet: saisie, restitution et décision humaine finale.

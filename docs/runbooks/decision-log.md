@@ -34,6 +34,7 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - **Données & Préprocessing** : DEC-008, DEC-009, DEC-010, DEC-011, DEC-012, DEC-018, DEC-019
 - **Modélisation & Évaluation** : DEC-013, DEC-014, DEC-015, DEC-017, DEC-024
 - **Serving, MLOps & UI** : DEC-020, DEC-021, DEC-022, DEC-025
+- **Monitoring, dérive & boucle de feedback** : DEC-026, DEC-027, DEC-028
 
 ---
 
@@ -332,3 +333,39 @@ Il garantit la traçabilité des arbitrages pour le jury et la maintenabilité f
 - Impact : Expérience de démonstration fluide, professionnelle et cohérente avec la stack de supervision (Grafana/Prometheus).
 - Risques / limites : Nécessite de veiller à la bonne réactivité responsive sur tous les écrans.
 - Suivi / action : Captures d'écran rafraîchies et intégrées dans le README.
+
+## DEC-026 - Étendre le dashboard Grafana existant avec des métriques de sortie modèle
+- Date : 2026-09-10
+- Section notebook : 8.4 / Annexes MLOps
+- Statut : accepted
+- Contexte : Le dashboard Grafana provisionné en M5 se concentrait sur des indicateurs d'infrastructure (débit, latence, statuts HTTP) sans donner de visibilité sur le comportement du modèle en production (classes prédites, confiance, abstention).
+- Décision : Étendre le même dashboard provisionné (`infra/compose/grafana/provisioning/dashboards/json/multimodal-api-overview.json`) avec trois sections : qualité du service, réponses du modèle (classes, confiance, abstention) et distribution des scores. Exposer de nouveaux compteurs Prometheus (`api_prediction_class_total`, `api_prediction_confidence`, `api_prediction_proba_total`, `api_model_metric`) pré-initialisés sur toutes les combinaisons de labels pour éviter les panels « No data ».
+- Alternatives considérées : Créer un dashboard séparé dédié au modèle ; publier les métriques offline (PSI, KS, F1 sur 12 semaines) directement dans Grafana.
+- Justification : Le dashboard provisionné reste l'unique source affichée en démo ; Grafana n'affiche que ce que Prometheus scrape en continu — les métriques batch (PSI/KS/calibration) n'ont pas leur place ici et restent des figures notebook.
+- Impact : Visibilité en temps réel sur la répartition des classes prédites, le taux d'abstention et la confiance du modèle, sans dépendre d'un second outil.
+- Risques / limites : Les métriques exposées restent des proxies de la qualité (confiance, volume) et ne remplacent pas une mesure de dérive statistique (PSI/KS) ni de calibration réelle, qui nécessitent les vraies cibles et sont donc mesurées en différé, hors Grafana.
+- Suivi / action : Script `scripts/generate_traffic.py` utilisé pour peupler le dashboard en démo ; captures intégrées au README.
+
+## DEC-027 - Mettre en place une boucle de feedback (endpoint, stockage SQLite, trigger cron)
+- Date : 2026-09-14
+- Section notebook : 9.2 / 9.3
+- Statut : accepted
+- Contexte : Le modèle en production ne bénéficiait d'aucun mécanisme de collecte de vérité terrain post-déploiement, empêchant tout réentraînement fondé sur des données réelles annotées.
+- Décision : Ajouter trois endpoints (`POST /feedback`, `GET /feedback/count`, `GET /feedback/health`) directement dans `src/api/main.py` (et non un routeur/microservice séparé, pour rester cohérent avec l'organisation existante de l'API), adossés à un nouveau module `src/api/feedback_store.py` (SQLite, table `feedbacks` avec `request_id` en clé primaire et colonne `used_for_training`). Le déclenchement du réentraînement est confié à un job cron (`infra/cron/retrain.crontab`, toutes les 6h) qui exécute `scripts/retrain_feedback.py` sous condition d'un seuil de feedbacks **non consommés** (`used_for_training = 0`), et non du total cumulé.
+- Alternatives considérées : Stockage CSV versionné (écarté : pas de garantie d'unicité, conflits de merge à chaque feedback) ; réentraînement déclenché à chaque feedback reçu (écarté : coûteux et instable) ; comptage du total de feedbacks pour le seuil (écarté : redéclenche indéfiniment une fois le seuil atteint).
+- Justification : SQLite est déjà maîtrisé (hérité de M3), garantit l'intégrité via la PK et gère nativement la concurrence d'écriture. Distinguer les feedbacks consommés des nouveaux évite les réentraînements en boucle. Un `request_id` déjà associé à un label différent renvoie 409 (conflit arbitré par un humain) plutôt qu'un écrasement silencieux.
+- Impact : Chaîne complète endpoint -> stockage -> trigger -> réentraînement automatisée et testée (`tests/test_feedback_loop.py`, `tests/integration/test_feedback_integration.py`, 14 tests dédiés).
+- Risques / limites : Le script `retrain_feedback.py` ne réalise pour l'instant qu'une jointure simplifiée entre feedbacks et features (TODO explicite dans le code) ; le `reference_set` de comparaison doit être renseigné avant mise en production réelle du trigger.
+- Suivi / action : Documentation complète dans `docs/FEEDBACK_LOOP.md` ; workflow GitHub Actions `retrain.yml` pour le déclenchement manuel/planifié et le redéploiement conditionnel.
+
+## DEC-028 - Formaliser une politique de promotion testable (recall_class_2 comme métrique critique)
+- Date : 2026-09-14
+- Section notebook : 9.2 / 9.3
+- Statut : accepted
+- Contexte : Un modèle réentraîné n'a aucun droit acquis à remplacer celui en production ; sans règle écrite et testée, la décision de déploiement restait implicite et non auditable.
+- Décision : Isoler la décision dans une fonction pure `decide_promotion(candidate, production)` (`scripts/promotion.py`), sans dépendance à scikit-learn, testée sur des métriques mockées. La règle retenue : le candidat est promu si son `recall_class_2` (classe 2, risque de longue durée) ne baisse pas de plus de 0,5 point par rapport à la production, et si son `f1_macro` ne baisse pas de plus de 1 point (tolérance dépassable si le gain de `recall_class_2` compense). Le `reference_set` figé n'entre jamais dans l'entraînement du candidat et sert uniquement d'arbitre de comparaison.
+- Alternatives considérées : Promotion automatique dès que le F1 macro global s'améliore (écarté : masque une dégradation sur la détection des cas à risque) ; règle sans tolérance (écarté : bloque des candidats meilleurs sur du bruit d'échantillonnage) ; décision codée directement dans le script de réentraînement (écarté : intestable en isolation).
+- Justification : Un dossier relevant réellement de la classe 2 non détecté coûte plus cher métier qu'un dossier signalé à tort ; c'est pourquoi `recall_class_2` est la métrique critique, avec `f1_macro` comme garde-fou d'équilibre global. La `reason` retournée est journalisée en langage explicite pour rester compréhensible sans relire le code.
+- Impact : Chaque exécution de `retrain_feedback.py` se termine par une décision tracée (promue ou rejetée) et journalisée dans `logs/retraining/`, jamais par un échec silencieux (`exit 0` dans les deux cas, `exit 1` réservé aux vraies erreurs).
+- Risques / limites : Les seuils de tolérance (0,5 % / 1 %) sont des arbitrages assumés à réévaluer après les premiers cycles réels de réentraînement ; ils ne sont pas dérivés d'une analyse coût/bénéfice chiffrée en euros à ce stade.
+- Suivi / action : Politique documentée et défendue dans cette fiche (DEC-028) ; 6 tests unitaires dédiés (`tests/test_feedback_loop.py::TestPromotionPolicy`) couvrant les cas gain net, régression critique, candidat identique et candidat pire partout.

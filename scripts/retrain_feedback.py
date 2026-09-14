@@ -342,7 +342,7 @@ def apply_sample_size_guard(decision: PromotionDecision, joined_count: int) -> P
     """Rétrograde une promotion en rejet si trop peu de feedbacks l'appuient.
 
     Avec peu de feedbacks joints, un delta de métriques (recall_class_2
-    mesuré sur ~18 échantillons de classe 2 dans le reference_set) reflète
+    mesuré sur ~90 échantillons de classe 2 dans le reference_set) reflète
     surtout le bruit d'échantillonnage/entraînement plutôt qu'un vrai signal
     apporté par les feedbacks. On ne fait confiance à une promotion qu'au-delà
     de MIN_FEEDBACK_FOR_PROMOTION feedbacks joints.

@@ -37,8 +37,12 @@ from src.config import (
     PROJECT_ROOT,
 )
 from src.features.preprocessing import build_model_frame
-from src.modeling.train import train_and_save_model
+from src.api.feedback_store import FeedbackStore
+from scripts.retrain_feedback import run_retrain_cycle
 from src.api.schemas import (
+    FeedbackCountResponse,
+    FeedbackRequest,
+    FeedbackResponse,
     HealthResponse,
     PredictRequest,
     PredictResponse,
@@ -51,6 +55,8 @@ app = FastAPI(
     version="1.0.0",
     description="Inference API for return-to-employment delay classification.",
 )
+
+FEEDBACK_STORE = FeedbackStore()
 
 UI_DIR = PROJECT_ROOT / "app" / "ui"
 
@@ -266,6 +272,24 @@ def _read_jsonl_tail(file_path: Path, limit: int) -> list[dict]:
     return events[-limit:]
 
 
+def _find_logged_prediction(request_id: str) -> dict | None:
+    """Look up a previously logged /predict event by its request_id."""
+    if not PREDICT_LOG_PATH.exists():
+        return None
+    with PREDICT_LOG_PATH.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("request_id") == request_id:
+                return event
+    return None
+
+
 @app.get("/", include_in_schema=False)
 def ui_home() -> FileResponse:
     return FileResponse(UI_DIR / "index.html")
@@ -363,16 +387,15 @@ def predict(payload: PredictRequest) -> PredictResponse:
 
 @app.post("/retrain", response_model=TrainResponse)
 def retrain(payload: TrainRequest) -> TrainResponse:
-    event_id = f"train_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}"
-
     with TRAIN_LATENCY.time():
         try:
-            metadata = train_and_save_model(
-                csv_path=payload.dataset_path,
-                mlflow_tracking_uri=payload.mlflow_tracking_uri,
-                mlflow_experiment=payload.mlflow_experiment,
+            result = run_retrain_cycle(
+                min_feedback=0,
+                dataset_path=payload.dataset_path,
+                trigger=payload.trigger,
             )
-            reload_artifacts()
+            if result["status"] == "promoted":
+                reload_artifacts()
             TRAIN_COUNTER.labels(status="ok").inc()
         except (FileNotFoundError, OSError, ValueError, RuntimeError, TypeError) as exc:
             TRAIN_COUNTER.labels(status="error").inc()
@@ -380,7 +403,6 @@ def retrain(payload: TrainRequest) -> TrainResponse:
                 json.dumps(
                     {
                         "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
-                        "event_id": event_id,
                         "status": "error",
                         "dataset_path": payload.dataset_path,
                         "trigger": payload.trigger,
@@ -389,9 +411,7 @@ def retrain(payload: TrainRequest) -> TrainResponse:
                     ensure_ascii=False,
                 )
             )
-            logging.getLogger("api.train").exception(
-                "Training failed for event %s", event_id
-            )
+            logging.getLogger("api.train").exception("Training failed")
             raise HTTPException(
                 status_code=500, detail=f"Training failed: {exc}"
             ) from exc
@@ -400,21 +420,65 @@ def retrain(payload: TrainRequest) -> TrainResponse:
         json.dumps(
             {
                 "timestamp_utc": datetime.now(tz=timezone.utc).isoformat(),
-                "event_id": event_id,
+                "event_id": result["event_id"],
                 "status": "ok",
+                "outcome": result["status"],
                 "dataset_path": payload.dataset_path,
                 "trigger": payload.trigger,
                 "model_version": model_version(),
-                "metrics": metadata.get("metrics", {}),
+                "metrics": result.get("candidate_metrics", {}),
+                "reason": result.get("reason"),
             },
             ensure_ascii=False,
         )
     )
 
     return TrainResponse(
-        status="ok",
-        event_id=event_id,
+        status=result["status"],
+        event_id=result["event_id"],
         model_version=model_version(),
-        run_id=metadata.get("mlflow", {}).get("run_id"),
-        metrics=metadata.get("metrics", {}),
+        run_id=result.get("mlflow_run_id"),
+        metrics=result.get("candidate_metrics", {}),
+        reason=result.get("reason"),
     )
+
+
+@app.post("/feedback", response_model=FeedbackResponse, status_code=201)
+def post_feedback(payload: FeedbackRequest) -> FeedbackResponse:
+    logged_event = _find_logged_prediction(payload.request_id)
+    if logged_event is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"request_id inconnu : {payload.request_id} n'a jamais été prédit",
+        )
+
+    status, http_code = FEEDBACK_STORE.insert_or_conflict(
+        payload.request_id, payload.true_label, payload.comments
+    )
+
+    if http_code == 409:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Feedback conflictuel : {payload.request_id} existe avec un label différent",
+        )
+
+    return FeedbackResponse(
+        status="stored",
+        message=f"Feedback {status} pour {payload.request_id}",
+        feedback_id=payload.request_id,
+    )
+
+
+@app.get("/feedback/count", response_model=FeedbackCountResponse)
+def get_feedback_count() -> FeedbackCountResponse:
+    return FeedbackCountResponse(**FEEDBACK_STORE.get_count())
+
+
+@app.get("/feedback/health")
+def feedback_health() -> dict:
+    counts = FEEDBACK_STORE.get_count()
+    return {
+        "status": "ok",
+        "total_feedbacks": counts["total"],
+        "unconsumed_feedbacks": counts["new"],
+    }

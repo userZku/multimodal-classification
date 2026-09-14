@@ -207,7 +207,9 @@ async function triggerRetrain() {
       return;
     }
 
-    retrainFeedback.textContent = `Retrain OK (${data.event_id}) - run: ${data.run_id || "-"}`;
+    const labels = { promoted: "Candidat PROMU", rejected: "Candidat rejeté", skipped: "Ignoré (rien à faire)" };
+    const outcome = labels[data.status] || data.status;
+    retrainFeedback.textContent = `${outcome} (${data.event_id})${data.reason ? " — " + data.reason.split("\n")[0] : ""}`;
     await loadHealth();
   } catch (error) {
     retrainFeedback.textContent = "Erreur de connexion retrain";

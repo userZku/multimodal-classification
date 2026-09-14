@@ -63,6 +63,7 @@ class TrainResponse(BaseModel):
     model_version: str
     run_id: str | None = None
     metrics: dict
+    reason: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -70,3 +71,31 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     model_version: str
     run_id: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "request_id": "req_20260914_120000_abc123",
+                "true_label": 1,
+                "comments": "L'usager a été embauché après 30 jours.",
+            }
+        },
+    )
+
+    request_id: str
+    true_label: int = Field(..., ge=0, le=2)
+    comments: str | None = None
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+    message: str
+    feedback_id: str | None = None
+
+
+class FeedbackCountResponse(BaseModel):
+    total: int
+    new: int

@@ -59,22 +59,23 @@ def test_predict_rejects_sensitive_payload_field() -> None:
 
 
 def test_retrain_endpoint_returns_ok_with_mocked_training(monkeypatch) -> None:
-    def fake_train_and_save_model(csv_path=None, **kwargs):
+    def fake_run_retrain_cycle(min_feedback=0, dataset_path=None, trigger="manual"):
         return {
-            "metrics": {
-                "accuracy": 0.75,
-                "f1_macro": 0.72,
-                "recall_class_2": 0.54,
-            }
+            "status": "promoted",
+            "event_id": "retrain_test_abc123",
+            "feedbacks_joined": 0,
+            "candidate_metrics": {"f1_macro": 0.72, "recall_class_2": 0.54},
+            "production_metrics": {"f1_macro": 0.70, "recall_class_2": 0.50},
+            "reason": "test",
         }
 
-    monkeypatch.setattr(api_main, "train_and_save_model", fake_train_and_save_model)
+    monkeypatch.setattr(api_main, "run_retrain_cycle", fake_run_retrain_cycle)
     monkeypatch.setattr(api_main, "reload_artifacts", lambda: None)
 
     response = client.post("/retrain", json={"trigger": "test"})
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "ok"
+    assert data["status"] == "promoted"
     assert "event_id" in data
     assert "metrics" in data
 

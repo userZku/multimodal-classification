@@ -26,7 +26,7 @@ Aujourd'hui, le projet couvre déjà:
 |---|---|
 | Modèle | Pipeline XGBoost S2 multimodal, sans variable sensible directe |
 | Docker | Image API + orchestration locale via Docker Compose |
-| API | Service FastAPI avec `/health`, `/predict`, `/retrain`, `/history`, `/metrics` |
+| API | Service FastAPI avec `/health`, `/predict`, `/retrain`, `/history`, `/metrics`, `/rollback` |
 | Interface | UI de démo pour tester une prédiction et relire les dernières inférences |
 | Suivi ML | Serveur MLflow Docker pour les runs, métriques et artefacts |
 | Monitoring | Supervision Prometheus + Grafana (métriques de sortie modèle) |
@@ -35,18 +35,126 @@ Aujourd'hui, le projet couvre déjà:
 
 ## Sommaire
 
-1. [Problème métier](#problème-métier)
-2. [Architecture du système](#architecture-du-système)
-3. [Stratégie de modélisation](#stratégie-de-modélisation)
-4. [Contrat API](#contrat-api)
-5. [Boucle de feedback et réentraînement](#boucle-de-feedback-et-réentraînement)
-6. [Stack de supervision](#stack-de-supervision)
-7. [Pipeline CI/CD](#pipeline-cicd)
-8. [Démarrage rapide](#démarrage-rapide)
+1. [Démarrage rapide](#démarrage-rapide-recommandé--docker)
+2. [Problème métier](#problème-métier)
+3. [Architecture du système](#architecture-du-système)
+4. [Stratégie de modélisation](#stratégie-de-modélisation)
+5. [Contrat API](#contrat-api)
+6. [Boucle de feedback et réentraînement](#boucle-de-feedback-et-réentraînement)
+7. [Stack de supervision](#stack-de-supervision)
+8. [Pipeline CI/CD](#pipeline-cicd)
 9. [Tutoriel : tester la boucle de feedback de bout en bout](#tutoriel--tester-la-boucle-de-feedback-de-bout-en-bout)
 10. [UI et captures d'écran](#ui-et-captures-décran)
 11. [Structure du dépôt](#structure-du-dépôt)
 12. [Livrables certification](#livrables-certification)
+
+## Démarrage rapide (recommandé : Docker)
+
+### Prérequis
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé et **lancé** (vérifier avec `docker --version`)
+- Ports libres sur la machine : `8000` (API), `9090` (Prometheus), `3000` (Grafana), `5000` (MLflow)
+- ~2 Go d'espace disque libre pour les images
+
+### 1) Récupérer le projet
+
+```bash
+git clone https://github.com/userZku/multimodal-classification.git
+cd multimodal-classification
+```
+
+### 2) Lancer toute la stack
+
+```bash
+docker compose up -d --build
+```
+
+Construit les images et démarre 5 services (`api`, `mlflow`, `prometheus`, `grafana`, `retrain-cron`). Premier build : environ 1 à 2 minutes.
+
+### 3) Vérifier que tout tourne
+
+```bash
+docker compose ps
+```
+
+Tous les services doivent afficher `Up`. Puis :
+
+```bash
+curl http://localhost:8000/health
+```
+
+Réponse attendue :
+
+```json
+{"status": "ok", "model_loaded": true, "model_version": "xgb-s2-...", "run_id": "..."}
+```
+
+Si `model_loaded` vaut `false`, le modèle n'a pas encore été entraîné (premier lancement sur une machine neuve) : ouvre l'UI (étape suivante) et clique sur **« Relancer l'entraînement »**, ou lance directement :
+
+```bash
+docker compose exec api python -m src.modeling.train
+```
+
+### 4) Ouvrir l'interface
+
+Va sur **http://localhost:8000** : formulaire de prédiction, historique des inférences, boutons de réentraînement et de rollback.
+
+### 5) Explorer la supervision (optionnel)
+
+| Outil | URL | Identifiants |
+|---|---|---|
+| Swagger (doc API interactive) | http://localhost:8000/docs | — |
+| Grafana (dashboards) | http://localhost:3000 | `admin` / `admin` |
+| Prometheus | http://localhost:9090 | — |
+| MLflow (suivi des runs) | http://localhost:5000 | — |
+
+### 6) Arrêter la stack
+
+```bash
+docker compose down
+```
+
+### Problèmes fréquents
+
+| Symptôme | Cause probable | Solution |
+|---|---|---|
+| `Cannot connect to the Docker daemon` | Docker Desktop n'est pas lancé | Démarrer Docker Desktop puis réessayer |
+| `port is already allocated` | Un autre programme utilise déjà 8000/9090/3000/5000 | Arrêter le programme concurrent, ou changer les ports dans [docker-compose.yml](docker-compose.yml) |
+| `/health` renvoie `model_loaded: false` | Modèle jamais entraîné | Cf. étape 3 : entraîner via l'UI ou `docker compose exec api python -m src.modeling.train` |
+| `/predict` renvoie `503` | Idem | Idem |
+| Le build Docker est très long au premier lancement | Téléchargement des images de base (Python, Prometheus, Grafana) | Normal la première fois ; les lancements suivants réutilisent le cache |
+
+> Les commandes `curl -d '...'` de ce README sont en syntaxe bash. Sous PowerShell (Windows), utilisez des guillemets échappés : `curl -d "{\"cle\": \"valeur\"}"`.
+
+### Alternative : exécution locale sans Docker (pour développer)
+
+Utile pour itérer sur le code Python sans reconstruire l'image à chaque fois. Sans Docker, seules l'API et l'UI fonctionnent (pas de Prometheus/Grafana/MLflow).
+
+```bash
+# 1) Créer l'environnement virtuel et installer les dépendances
+uv venv --python 3.12
+uv pip install -r requirements.txt
+```
+
+Activer l'environnement (à refaire à chaque nouvelle session de terminal) :
+
+```bash
+source .venv/bin/activate        # Linux / macOS
+```
+
+```powershell
+.venv\Scripts\Activate.ps1       # Windows PowerShell
+```
+
+```bash
+# 2) Entraîner le modèle (crée models/best_model/model.joblib)
+python -m src.modeling.train
+
+# 3) Lancer l'API
+uvicorn src.api.main:app --reload
+```
+
+Puis va sur **http://localhost:8000**.
 
 ## Problème métier
 
@@ -217,39 +325,6 @@ Workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 | deploy | webhook conditionnel |
 
 Workflow de réentraînement: [.github/workflows/retrain.yml](.github/workflows/retrain.yml) — déclenchement manuel (`workflow_dispatch`) ou planifié (cron quotidien), exécute `scripts/retrain_feedback.py`, puis build/push/redéploie l'image **uniquement si le candidat est promu**.
-
-## Démarrage rapide
-
-### 1) Préparer Python
-
-```bash
-uv venv --python 3.12
-uv pip install -r requirements.txt
-```
-
-### 2) Entraîner le modèle
-
-```bash
-python -m src.modeling.train
-```
-
-### 3) Lancer l'API
-
-```bash
-uvicorn src.api.main:app --reload
-```
-
-Sous Windows:
-
-```bash
-.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
-```
-
-### 4) Lancer la stack complète (API + MLflow + Prometheus + Grafana)
-
-```bash
-docker compose up -d --build
-```
 
 ## Tutoriel : Tester la boucle de feedback de bout en bout
 

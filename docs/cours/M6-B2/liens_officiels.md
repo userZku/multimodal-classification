@@ -1,24 +1,24 @@
-# Liens officiels — M6-B1
+# Liens officiels — M6-B2
 
 Dernière vérification : 2026-06-10
 
 ## Documentation officielle
 
-- **scipy.stats — ks_2samp** : https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html
+- **FastAPI — Request body** : https://fastapi.tiangolo.com/tutorial/body/
   - État : ✅ vérifié le 2026-06-10
-- **scipy.stats — chi2_contingency** : https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html
+- **Python — sqlite3** : https://docs.python.org/3/library/sqlite3.html
   - État : ✅ vérifié le 2026-06-10
-- **scikit-learn — Calibration** : https://scikit-learn.org/stable/modules/calibration.html
+- **scikit-learn — Pipeline** : https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html
   - État : ✅ vérifié le 2026-06-10
-- **Grafana — Provisioning** : https://grafana.com/docs/grafana/latest/administration/provisioning/
+- **GitHub Actions — workflow_dispatch** : https://docs.github.com/actions/using-workflows/manually-running-a-workflow
+  - État : ✅ vérifié le 2026-06-10
+- **crontab (guru)** : https://crontab.guru/
   - État : ✅ vérifié le 2026-06-10
 
-## Articles de référence
+## Tutoriels et articles
 
-- **Population Stability Index (panorama)** : https://en.wikipedia.org/wiki/Population_stability_index
-- **Evidently AI — Data drift (concepts, bonus)** : https://www.evidentlyai.com/ml-in-production/data-drift
-- **Google ML Crash Course — Classification** : https://developers.google.com/machine-learning/crash-course/classification
+- **MLOps principles — boucle continue** : https://ml-ops.org/content/mlops-principles
+- **GitHub — Co-authored commits** : https://docs.github.com/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors
 
-## Repositories de référence
+## Optionnel (bonus)
 
-- **scikit-learn — exemples calibration** : https://scikit-learn.org/stable/auto_examples/calibration/plot_calibration_curve.html

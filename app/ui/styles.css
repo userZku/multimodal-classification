@@ -197,6 +197,7 @@ a {
 
 .page-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   justify-content: space-between;
   gap: 30px;
@@ -286,6 +287,68 @@ a {
   font-family: var(--mono);
   font-size: 0.7rem;
   text-align: right;
+}
+
+.retrain-result {
+  width: 100%;
+  flex-basis: 100%;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border, #3a3a3a);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.retrain-result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.retrain-badge {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.retrain-badge.promoted {
+  background: rgba(141, 215, 160, 0.18);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.retrain-badge.rejected {
+  background: rgba(255, 155, 145, 0.18);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.retrain-badge.skipped,
+.retrain-badge.rolled_back,
+.retrain-badge.error {
+  background: rgba(255, 210, 125, 0.18);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.retrain-version {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.retrain-reason {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .overview-cards {

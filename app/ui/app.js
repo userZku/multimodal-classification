@@ -34,8 +34,27 @@ const historyList = document.getElementById("history-list");
 const historyEmpty = document.getElementById("history-empty");
 const refreshHistoryButton = document.getElementById("refresh-history");
 const retrainButton = document.getElementById("retrain-button");
-const retrainFeedback = document.getElementById("retrain-feedback");
 const rollbackButton = document.getElementById("rollback-button");
+const retrainResult = document.getElementById("retrain-result");
+const retrainBadge = document.getElementById("retrain-badge");
+const retrainVersion = document.getElementById("retrain-version");
+const retrainReason = document.getElementById("retrain-reason");
+
+const RETRAIN_BADGE_LABELS = {
+  promoted: "✅ Candidat promu — nouveau modèle en production",
+  rejected: "✗ Candidat rejeté — modèle précédent conservé",
+  skipped: "○ Ignoré — pas assez de nouveaux feedbacks",
+  rolled_back: "↺ Rollback effectué",
+  error: "⚠ Erreur",
+};
+
+function showRetrainResult(status, { version, reason } = {}) {
+  retrainResult.classList.remove("hidden");
+  retrainBadge.className = `retrain-badge ${status}`;
+  retrainBadge.textContent = RETRAIN_BADGE_LABELS[status] || status;
+  retrainVersion.textContent = version ? `Version servie : ${version}` : "";
+  retrainReason.textContent = reason || "";
+}
 
 function normalizeRomeCode(value) {
   return (value || "").trim().toUpperCase();
@@ -57,9 +76,6 @@ function setHealthState(ok, message, loaded, version, runId) {
   healthLabel.textContent = message;
   modelLoaded.textContent = loaded;
   modelVersion.textContent = version;
-
-  retrainFeedback.classList.remove("hidden");
-  retrainFeedback.textContent = `Run courant: ${runId || "-"}`;
 }
 
 async function loadHealth() {
@@ -193,8 +209,7 @@ async function triggerRollback() {
     return;
   }
   rollbackButton.disabled = true;
-  retrainFeedback.classList.remove("hidden");
-  retrainFeedback.textContent = "Rollback en cours...";
+  showRetrainResult("skipped", { reason: "Rollback en cours..." });
 
   try {
     const response = await fetch("/rollback", {
@@ -205,23 +220,43 @@ async function triggerRollback() {
 
     const data = await response.json();
     if (!response.ok) {
-      retrainFeedback.textContent = data.detail || "Échec du rollback";
+      showRetrainResult("error", { reason: data.detail || "Échec du rollback" });
       return;
     }
 
-    retrainFeedback.textContent = `Rollback OK — snapshot ${data.restored_timestamp} restaurée`;
     await loadHealth();
+    showRetrainResult("rolled_back", {
+      version: modelVersion.textContent,
+      reason: `Snapshot ${data.restored_timestamp} restaurée — métriques : ${JSON.stringify(data.metrics)}`,
+    });
   } catch (error) {
-    retrainFeedback.textContent = "Erreur de connexion rollback";
+    showRetrainResult("error", { reason: "Erreur de connexion rollback" });
   } finally {
     rollbackButton.disabled = false;
   }
 }
 
 async function triggerRetrain() {
+  try {
+    const countResponse = await fetch("/feedback/count");
+    if (countResponse.ok) {
+      const counts = await countResponse.json();
+      if (counts.new === 0) {
+        const proceed = confirm(
+          "Aucun nouveau feedback depuis le dernier réentraînement : ce cycle n'a rien de nouveau à apprendre " +
+            "et sera très probablement ignoré (ou rejeté). Lancer quand même ?"
+        );
+        if (!proceed) {
+          return;
+        }
+      }
+    }
+  } catch (error) {
+    // Si /feedback/count échoue, on laisse /retrain lui-même trancher.
+  }
+
   retrainButton.disabled = true;
-  retrainFeedback.classList.remove("hidden");
-  retrainFeedback.textContent = "Retrain en cours...";
+  showRetrainResult("skipped", { reason: "Retrain en cours (cela peut prendre quelques secondes)..." });
 
   try {
     const response = await fetch("/retrain", {
@@ -234,16 +269,17 @@ async function triggerRetrain() {
 
     const data = await response.json();
     if (!response.ok) {
-      retrainFeedback.textContent = data.detail || "Échec du retrain";
+      showRetrainResult("error", { reason: data.detail || "Échec du retrain" });
       return;
     }
 
-    const labels = { promoted: "Candidat PROMU", rejected: "Candidat rejeté", skipped: "Ignoré (rien à faire)" };
-    const outcome = labels[data.status] || data.status;
-    retrainFeedback.textContent = `${outcome} (${data.event_id})${data.reason ? " — " + data.reason.split("\n")[0] : ""}`;
     await loadHealth();
+    showRetrainResult(data.status, {
+      version: modelVersion.textContent,
+      reason: data.reason || "(aucun détail retourné)",
+    });
   } catch (error) {
-    retrainFeedback.textContent = "Erreur de connexion retrain";
+    showRetrainResult("error", { reason: "Erreur de connexion retrain" });
   } finally {
     retrainButton.disabled = false;
   }

@@ -50,7 +50,13 @@
               <a class="button primary" href="#predict-form">Nouvelle prédiction</a>
               <button class="button ghost" type="button" id="retrain-button">Relancer l'entraînement</button>
               <button class="button ghost" type="button" id="rollback-button">Rollback modèle</button>
-              <small id="retrain-feedback" class="retrain-feedback hidden"></small>
+            </div>
+            <div id="retrain-result" class="retrain-result hidden">
+              <div class="retrain-result-head">
+                <span id="retrain-badge" class="retrain-badge"></span>
+                <span id="retrain-version" class="retrain-version"></span>
+              </div>
+              <pre id="retrain-reason" class="retrain-reason"></pre>
             </div>
           </header>
 

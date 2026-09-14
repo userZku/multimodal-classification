@@ -1,0 +1,15 @@
+# Crontab pour le réentraînement automatique
+# À installer avec : crontab -e (Linux/macOS) ou Task Scheduler (Windows)
+
+# Toutes les 6 heures : vérifier si >=200 feedbacks → réentraîner
+0 */6 * * * cd /opt/multimodal-classification && .venv/bin/python scripts/retrain_feedback.py --min-feedback 200 >> logs/retraining/cron.log 2>&1
+
+# Alternative : tous les jours à 3h du matin
+# 0 3 * * * cd /opt/multimodal-classification && .venv/bin/python scripts/retrain_feedback.py --min-feedback 200 >> logs/retraining/cron.log 2>&1
+
+# Important : 
+# - Chemins ABSOLUS (pas relatifs)
+# - Activer le venv
+# - Rediriger logs
+# - Ne pas utiliser de variable $HOME
+# - Valider l'expression sur https://crontab.guru/

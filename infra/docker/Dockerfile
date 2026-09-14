@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
 COPY app ./app
+COPY scripts ./scripts
 COPY data ./data
 RUN mkdir -p models logs
 

@@ -1,0 +1,167 @@
+name: Retrain & Promote
+
+on:
+  # Trigger manuel pour démo
+  workflow_dispatch:
+    inputs:
+      min_feedback:
+        description: "Nombre minimum de feedbacks"
+        required: false
+        default: "200"
+
+  # Trigger cron (tous les jours à 3h du matin UTC)
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  PYTHON_VERSION: "3.12"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/multimodal-api
+
+jobs:
+  retrain:
+    name: Retrain & Decide Promotion
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests (sanity check)
+        run: |
+          python -m pytest tests/test_feedback_loop.py -v --tb=short
+
+      - name: Trigger retrain with feedbacks
+        id: retrain
+        run: |
+          MIN_FB=${{ github.event.inputs.min_feedback || '200' }}
+          python scripts/retrain_feedback.py --min-feedback $MIN_FB
+          echo "status=ok" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Check promotion decision
+        if: steps.retrain.outcome == 'success'
+        id: check_promotion
+        run: |
+          # Si un tag a été créé (candidate promu), on le détecte
+          if git describe --tags --exact-match HEAD 2>/dev/null | grep -q "v"; then
+            echo "promoted=true" >> $GITHUB_OUTPUT
+            echo "tag=$(git describe --tags --exact-match HEAD)" >> $GITHUB_OUTPUT
+          else
+            echo "promoted=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Build and push image (if promoted)
+        if: steps.check_promotion.outputs.promoted == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./infra/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.check_promotion.outputs.tag }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Redeploy with Docker Compose (if promoted)
+        if: steps.check_promotion.outputs.promoted == 'true'
+        run: |
+          echo "🚀 Redéploiement du modèle promu..."
+          # Note: Sur votre serveur de prod, déclencher :
+          # docker compose -f infra/compose/docker-compose.yml pull multimodal-api
+          # docker compose -f infra/compose/docker-compose.yml up -d multimodal-api
+          echo "✅ Redéploiement déclenché (à intégrer avec votre infra)"
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p workflow-logs
+          cp -r logs/retraining/* workflow-logs/ 2>/dev/null || true
+          ls -la workflow-logs/
+
+      - name: Upload logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrain-logs
+          path: workflow-logs/
+          retention-days: 30
+
+      - name: Slack notification (promoted)
+        if: steps.check_promotion.outputs.promoted == 'true'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "✅ Model Promoted!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Modèle Promu*\n\nTag: `${{ steps.check_promotion.outputs.tag }}`\n\nLe nouveau modèle a remplacé la version en production."
+                  }
+                }
+              ]
+            }
+        continue-on-error: true
+
+      - name: Slack notification (rejected)
+        if: steps.check_promotion.outputs.promoted == 'false' && steps.retrain.outcome == 'success'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "ℹ️ Model Rejected",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*ℹ️ Modèle Rejeté*\n\nLe candidat n'a pas satisfait les critères de promotion.\n\nConsulter les logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        continue-on-error: true
+
+      - name: Slack notification (error)
+        if: steps.retrain.outcome == 'failure'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "❌ Retrain Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ Erreur au Réentraînement*\n\nConsulter les logs : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        continue-on-error: true

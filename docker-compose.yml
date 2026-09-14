@@ -33,8 +33,33 @@ services:
       - ./models:/app/models
       - ./logs:/app/logs
       - ./mlruns:/app/mlruns
+      - ./data:/app/data
     depends_on:
       - mlflow
+
+  retrain-cron:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    container_name: multimodal-retrain-cron
+    restart: unless-stopped
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./mlruns:/app/mlruns
+      - ./data:/app/data
+    depends_on:
+      - api
+    entrypoint: ["/bin/sh", "-c"]
+    # Boucle toutes les 6h (cf. infra/cron/retrain.crontab) : pas de cron
+    # daemon dans l'image slim, donc un simple sleep-loop suffit.
+    command: >
+      "while true; do
+         python scripts/retrain_feedback.py --min-feedback 200;
+         sleep 21600;
+       done"
 
   prometheus:
     image: prom/prometheus:v2.54.1

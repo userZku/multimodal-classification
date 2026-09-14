@@ -114,7 +114,7 @@ sequenceDiagram
    U->>API: POST /feedback (request_id, true_label)
    API->>DB: insert_or_conflict (201 / 404 / 409)
 
-   TRG->>RT: déclenche (cron: si new >= seuil, sinon exit 0 ; manuel: sans seuil)
+   TRG->>RT: déclenche (cron: seuil atteint sinon exit 0, ou manuel: sans seuil)
    RT->>DB: load_unconsumed() + jointure aux logs /predict
    RT->>RT: entraîne candidat (historique - reference_set + feedbacks joints)
    RT->>PR: decide_promotion(candidat, prod) sur reference_set figé

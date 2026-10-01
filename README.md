@@ -1,4 +1,4 @@
-# Portfolio Classification Multimodale
+# Classification Multimodale - Certification 
 
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/fastapi-API-009688?logo=fastapi&logoColor=white)

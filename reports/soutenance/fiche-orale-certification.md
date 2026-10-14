@@ -1,479 +1,228 @@
 # Fiche orale de certification CISIA
 
-Support de préparation correspondant aux **24 slides du PPTX v2**. Les numéros ci-dessous suivent directement la présentation.
+Script à prononcer pour le **PPTX v2 (31 slides)**. Les textes entre guillemets sont une base mot pour mot ; les repères en dehors des guillemets servent à préparer les questions.
 
-## Mon fil rouge
+## À régler avant la soutenance
 
-**Comment aider un conseiller à repérer les situations de chômage de longue durée, sans utiliser directement la nationalité et sans laisser le modèle décider seul ?**
+- Le PPTX contient 31 slides, mais le PDF actuel en contient 30 : la slide 29 du PPTX (« Les garde-fous réduisent le risque… ») n’apparaît pas dans le PDF ; la page 29 du PDF correspond à la slide 30 du PPTX. Le PDF et le PPTX ne sont donc pas alignés. Réexporter le PDF ou décider explicitement quel support sera projeté. Cette fiche suit l’ordre du PPTX.
+- La couverture porte la date 14/10/2026 et les pieds de page 12/10/2026. Harmoniser les dates.
+- La slide 14 est intitulée « SHAP », mais le graphique visible correspond à l’importance native XGBoost (`feature_importances_`) du notebook, pas à une explication SHAP. Avant l’oral, soit remplacer l’image par une vraie analyse SHAP, soit renommer la slide et la présenter comme une importance native. Ne pas appeler ce graphique « SHAP ».
+- Le PPTX final affirme « S2 + XGBoost ». Le récit doit être honnête : XGBoost a été sélectionné initialement parce qu’il obtenait le meilleur F1 macro en S2, pas parce qu’il avait le meilleur rappel de classe 2. Avec le recul, un Random Forest ou une régression logistique aurait mérité d’être réévalué. Ne prétends pas que ce nouveau choix a déjà été entraîné ou validé.
 
-Mon histoire suit quatre questions :
+## Fil rouge
 
-1. Quelles erreurs faut-il éviter et que permettent les données ?
-2. Quel modèle choisir, avec quel compromis éthique ?
-3. Quand faut-il demander une revue humaine ?
-4. Comment rendre cette solution utilisable, observable et réversible ?
+« Mon projet classe les dossiers selon le délai potentiel de retour à l’emploi. Comme ce tri peut influer sur l’accompagnement proposé, je me suis intéressé aux erreurs, à la sélection du modèle et aux conditions d’une revue humaine. Je vais aussi distinguer ce que j’ai mesuré, ce qui fonctionne dans ma démonstration locale et ce qui reste à valider avant tout usage réel. »
 
-À chaque étape : **je pose une question, je montre une preuve, j'explique les options, je prends une décision, j'annonce sa limite**. Je ne lis pas les listes de composants : j'explique pourquoi ils sont nécessaires.
+## Script des slides
 
-## Repères à garder pendant la soutenance
+### Slide 1 — Couverture
 
-- **Couverture :** elle porte la date 14/10/2026 ; les pieds de page des slides intérieures portent 12/10/2026. Vérifier si cet écart est intentionnel.
-- **Slide 5 :** les proportions affichées sont 37,44 % / 44,48 % / 18,08 %.
-- **Slide 6 :** le test a été consulté dans une version antérieure. Le seuil actuel est choisi sur OOF, mais le test n'est pas historiquement vierge.
-- **Slides 7 à 10 :** les résultats des scénarios sont répartis sur quatre slides. F1 et rappel viennent de la validation croisée ; les erreurs `2 -> 0` sont comptées sur le test.
-- **Slide 8 :** S2 exclut `nationalite_hors_ue` ; cela n'élimine pas les proxys possibles.
-- **Slides 11 et 12 :** la règle combinée à 0,70 est évaluée dans le notebook ; l'API applique encore le seuil simple de 0,55.
-- **Slide 12 :** 8/10 signifie huit erreurs critiques signalées sur dix pour S2. Ce n'est ni le rappel général de classe 2, ni la preuve que les conseillers les ont corrigées.
-- **Slide 13 :** S2 est retenu malgré son score inférieur à S1 ; S4 compte 8 erreurs critiques au test mais conserve actuellement la nationalité.
-- **Slide 18 :** `Finished` signifie que le run est terminé, pas que le candidat est accepté.
-- **Slide 19 :** la capture montre un cycle `SKIP` faute de feedbacks suffisants, pas un entraînement ni une promotion.
-- **Slide 21 :** le job de déploiement est conditionnel ; le workflow peut être vert alors que le déploiement est ignoré si le webhook n'est pas configuré.
-- **Slides 22 et 23 :** l'intégration au référentiel, l'hébergement, la sécurité, la latence et le dimensionnement sont à valider, pas des réalisations démontrées.
+« Bonjour. Je vais vous présenter mon projet d’orientation multimodale des demandeurs d’emploi. Je vais partir du besoin métier, puis expliquer les données, les choix de modèles et les limites de la solution. »
 
-## Repères pour 30 minutes
+### Slide 2 — Cas d’usage et cadre réglementaire
 
-| Partie | Slides | Temps cible |
-|---|---|---:|
-| Sujet, données et protocole | 1 à 6 | 7 min |
-| Comparaison des scénarios et recommandation | 7 à 13 | 10 min |
-| API, interface, traçabilité et suivi | 14 à 19 | 7 min |
-| Livraison, limites et cible SI | 20 à 24 | 6 min |
+« Ce modèle peut influencer le type d’accompagnement proposé à une personne. Il doit donc rester une aide : le conseiller doit pouvoir confirmer, corriger ou contester la recommandation. L’AI Act et le RGPD sont des cadres à examiner avec les personnes compétentes. Je ne conclus pas moi-même que le système est ou n’est pas “à haut risque” : cela dépend de sa finalité et de son usage effectif. Je distingue aussi trois notions : une donnée personnelle au sens du RGPD, une catégorie particulière de données au sens de son article 9, et une caractéristique qui doit être protégée contre la discrimination. Âge et nationalité sont des données personnelles et peuvent soulever des enjeux de discrimination ; ils ne sont pas automatiquement des catégories particulières au sens de l’article 9. La nationalité peut toutefois, selon le contexte, révéler l’origine ethnique ; cette qualification doit être examinée avec le DPO ou le juriste. »
 
-Les textes suivants sont une base orale, pas un script à réciter mot pour mot. Pendant les 30 minutes, privilégier le message, la décision et sa preuve ; garder les concepts détaillés et les réponses difficiles pour les questions du jury.
+### Slide 3 — L’erreur critique
 
-### La formule pour raconter une décision
+« Les trois classes correspondent à un retour rapide, intermédiaire ou à un risque de dépasser douze mois. L’erreur que je surveille en priorité est une personne réellement en classe 2 prédite en classe 0 : le dossier pourrait alors ne pas être priorisé. Je l’appelle critique en raison de cette conséquence possible ; je n’ai pas mesuré une perte de chance réelle chez des usagers. »
 
-Pour chaque choix, suivre quatre temps : **besoin → options → critère d'arbitrage → limite**. Par exemple : « Je voulais réduire les erreurs critiques. J'ai comparé plusieurs scénarios et plusieurs règles. J'ai retenu S2 avec une politique de revue évaluée sur OOF, car je ne voulais pas utiliser directement la nationalité. Ce choix a un coût mesuré et impose de vérifier que les équipes peuvent traiter le volume de revues. »
+### Slide 4 — Données structurées, texte et cible
 
-Ne pas confondre trois niveaux de preuve : **mesuré dans le notebook**, **implémenté dans la démonstration locale**, **à valider avant intégration réelle**. C'est le repère le plus utile si une question dépasse les résultats disponibles.
+« J’ai 2 500 dossiers et dix colonnes, avec des informations numériques, catégorielles, une synthèse d’entretien et la classe à prédire. La nationalité hors UE est présente dans le jeu source, mais je l’ai retirée des entrées de S2 pour éviter de faire dépendre directement le tri de cette caractéristique. J’ai aussi exclu l’identifiant technique et le code communal brut des variables de prédiction. L’âge, lui, reste utilisé : c’est une donnée personnelle qui peut soulever un enjeu de discrimination, pas une variable sans risque. J’explique ce choix et sa limite dans l’audit. »
 
----
+### Slide 5 — Répartition et premiers risques
 
-## Slide 1 - Titre
+« La classe 2 représente 18,08 % des dossiers, contre 37,44 % pour la classe 0 et 44,48 % pour la classe 1. Ce déséquilibre m’oblige à regarder le rappel de la classe 2, et pas seulement un score global. J’ai aussi repéré des écarts entre groupes et des textes répétitifs ; ce sont des signaux à étudier, pas des preuves de causalité ou de discrimination du modèle. »
 
-**Message à retenir :** annoncer le sujet et le fil conducteur, sans entrer trop tôt dans les détails.
+### Slide 6 — Valeurs manquantes et imputation
 
-**Ce que je peux dire :**
+« J’ai repéré 84 diplômes manquants, soit 3,36 %. Dans le pipeline actuel, une valeur catégorielle manquante est remplacée par la modalité la plus fréquente ; pour le diplôme, c’est “Bac”. Cela décrit le traitement informatique, pas le diplôme réel de la personne : une case vide ne veut dire ni “Bac”, ni “sans diplôme”. Il faudrait vérifier le sens du blanc dans la source et comparer une modalité “inconnu” ou un indicateur de valeur manquante. »
 
-« Je vais vous présenter un prototype qui estime le délai de retour à l'emploi à partir des informations du dossier et de la synthèse d'entretien. Je vais surtout expliquer comment j'ai comparé les scénarios, traité une erreur métier importante et posé des limites à l'usage du modèle. »
+### Slide 7 — OOF et réserve sur le test
 
-**Transition :** « Je commence par le besoin concret auquel ce système essaie de répondre. »
+« J’ai séparé 2 000 dossiers d’apprentissage et 500 dossiers de test. Dans le train, la validation croisée en cinq groupes permet de prédire chaque dossier avec un modèle qui ne l’a pas appris : ce sont les prédictions OOF. Le prétraitement est réappris dans chaque groupe pour éviter la fuite de données. Elles servent à comparer et à choisir sans régler directement le seuil sur le test. J’ai aussi transformé le code INSEE communal en département et exclu le code communal brut du modèle. Le test a toutefois été consulté dans une version antérieure ; je ne le présente donc pas comme totalement vierge. »
 
-## Slide 2 - Classification multimodale
+### Slide 8 — Comparaison des modèles
 
-**Message à retenir :** je construis une aide qui signale un risque, pas un outil qui décide du parcours d'une personne.
+« Cette table compare quatre modèles dans chacun des scénarios. Chaque case donne le F1 macro puis le rappel de la classe 2, en validation croisée et avant le tuning final. En S2, le meilleur F1 de la grille est celui de XGBoost, à 0,681. Le meilleur rappel est celui de Random Forest, à 0,694 ; la régression logistique atteint 0,674, contre 0,558 pour XGBoost. Le modèle gagnant dépend donc du critère retenu. »
 
-**Ce que je peux dire :**
+### Slide 9 — S1, toutes les variables
 
-« Le sujet me demande d'estimer si le retour à l'emploi sera rapide, intermédiaire ou risque de dépasser douze mois. Pour cela, j'ai combiné des informations du dossier et le texte de la synthèse d'entretien. Mais mon objectif n'est pas de décider à la place du conseiller : je cherche à mieux repérer les dossiers qui méritent son attention. Je vais expliquer comment j'ai comparé les solutions et pourquoi j'en ai retenu une, avec ses limites. »
+« S1 est ma référence avec toutes les variables, y compris la nationalité. Il obtient un F1 macro de 0,708 et un rappel de classe 2 de 0,572 en validation croisée. Le test compte neuf erreurs `2→0`. Je garde ce scénario comme point de comparaison, pas comme le choix de conception, car il utilise directement la nationalité. »
 
-**Transition :** « Pour comprendre mes choix, il faut d'abord comprendre quelle erreur aurait la conséquence métier la plus grave. »
+### Slide 10 — S2, sans nationalité
 
-**Définition :** multimodal signifie ici combiner des données structurées en colonnes et du texte libre. Cela ne signifie pas que le projet traite aussi des images ou de l'audio.
+« S2 retire la nationalité des variables utilisées pour prédire, mais conserve l’âge et les autres informations du dossier ainsi que le texte. Son F1 macro est de 0,681 et son rappel de classe 2 de 0,558 en validation croisée ; le test compte dix erreurs `2→0`. Je préfère dire “S2 sans nationalité” plutôt que “sans variable sensible” : l’âge reste dans le modèle, et d’autres proxys peuvent subsister. »
 
-## Slide 3 - Toutes les erreurs ne se valent pas
+### Slide 11 — S3, texte seul
 
-**Message à retenir :** je donne la priorité à une erreur métier précise, plutôt qu'à une moyenne flatteuse.
+« S3 ne conserve que la synthèse d’entretien. Le rappel de classe 2 affiché est de 0,661 et le F1 macro de 0,635 en validation croisée. Il montre que le texte contient un signal, mais il compte douze erreurs `2→0` sur le test et le texte est peu diversifié. Le texte peut aussi refléter les choix de rédaction et les biais des conseillers ; je ne le traite donc pas comme une source neutre. »
 
-**Ce que je peux dire :**
+### Slide 12 — S4, tabulaire seul
 
-« J'ai commencé par traduire le sujet en trois classes : moins de six mois, six à douze mois, et plus de douze mois. Puis j'ai défini avec le brief l'erreur à surveiller en priorité : une personne réellement en classe 2 que le modèle annonce en classe 0. Cette erreur pourrait faire passer un besoin d'accompagnement renforcé sous le radar. Je l'appelle “critique” à cause de cette conséquence potentielle ; je n'affirme pas avoir mesuré un impact réel sur des usagers. »
+« S4 retire le texte et utilise les colonnes tabulaires. Son F1 macro est de 0,672, son rappel classe 2 de 0,589 en validation croisée et il compte huit erreurs `2→0` sur le test. Mais le S4 actuel conserve la nationalité. Il ne respecte donc pas la même contrainte que S2, et deux erreurs d’écart sur ce petit nombre ne suffisent pas à établir une supériorité robuste. »
 
-**Transition :** « Cette priorité métier posée, voyons les informations dont je disposais pour construire une prédiction. »
+### Slide 13 — Résultat test de S2 + XGBoost
 
-**Définitions :** classification = attribution à une catégorie ; apprentissage supervisé = apprentissage sur des exemples dont la catégorie est connue ; erreur `2 -> 0` = classe réelle 2, classe prédite 0.
+« Après le tuning effectué sur XGBoost, le résultat test affiché est une accuracy de 0,730, un F1 macro de 0,704, un rappel classe 2 de 0,533 et un ROC-AUC macro de 0,871. Sur les 90 dossiers réellement en classe 2, le modèle en retrouve 48 et en manque 42. Dix des 90 sont prédits classe 0, l’erreur prioritaire ; 32 sont prédits classe 1. Le test a déjà été consulté auparavant : ces chiffres décrivent cet échantillon, pas une performance indépendante garantie. »
 
-## Slide 4 - Les données disponibles
+### Slide 14 — Interprétation globale / SHAP
 
-**Message à retenir :** j'ai séparé les types de données et repéré dès le départ la variable sensible.
+**Correction préalable :** le visuel actuellement visible est une importance native XGBoost, pas SHAP. Si tu le gardes, renommer la slide et dire :
 
-**Ce que je peux dire :**
+« Le graphique montre l’importance native attribuée aux variables par XGBoost. Les variables catégorielles et le texte ressortent dans cette mesure. Ce graphique ne me dit pas si une variable augmente ou diminue la probabilité de classe 2, ne démontre aucune causalité et n’est pas une analyse SHAP. »
 
-« J'ai commencé par inventorier les 2 500 dossiers et leurs dix colonnes. J'ai regroupé les champs en trois familles : les informations numériques et catégorielles, le texte libre de l'entretien, et la cible à prédire. J'ai aussi identifié la nationalité hors UE comme variable sensible. Elle reste dans la comparaison S1 pour mesurer son effet, mais je l'exclus du scénario S2 retenu et de ses entrées de prédiction. »
+**Si un vrai graphique SHAP est inséré avant la soutenance, remplacer par :**
 
-**Transition :** « Avant d'entraîner un modèle, j'ai vérifié la qualité des champs et la répartition des résultats connus. »
+« Cette analyse SHAP résume comment les variables contribuent aux sorties du modèle pour la classe 2. Elle décrit le comportement appris par le modèle, pas les causes du retour à l’emploi ni une justification suffisante pour une décision administrative. »
 
-**Définitions :** cible = réponse à apprendre, ici `classe_retour_emploi` ; feature = variable utilisée pour prédire ; variable catégorielle = valeur parmi des modalités ; variable sensible = dans ce projet, donnée présentant un risque de discrimination. Cette dernière expression ne remplace pas une qualification juridique précise au sens du RGPD.
+### Slide 15 — La revue humaine se déclenche par une règle OU
 
-## Slide 5 - Ce que l'analyse des données révèle
+« La règle combinée envoie un dossier en revue si la confiance maximale est inférieure à 0,70, ou si le modèle prédit la classe 0 tout en donnant au moins 0,20 de probabilité à la classe 2. Un seul de ces deux critères suffit. La confiance est le score le plus élevé du modèle, pas une certitude. La règle combinée est évaluée dans le notebook, mais l’API actuelle utilise encore le seuil simple de 0,55. »
 
-**Message à retenir :** l'exploration m'a servi à comprendre les données avant de choisir comment les préparer et les évaluer.
+### Slide 16 — Couverture et charge de revue
 
-**Ce que je peux dire, après correction du graphique :**
+« Le seuil 0,70 a été choisi sur les prédictions OOF avec un budget d’escalade proche de 40 % et une cible de couverture d’au moins 70 % des erreurs critiques. En OOF, la règle escalade 40,2 % des dossiers et couvre 72,5 % des `2→0`. Sur le test, elle escalade 200 dossiers sur 500 et en signale huit sur dix ; deux ne le sont pas. Cela ne veut pas dire que le rappel général classe 2 vaut 80 %, ni que les huit signalements ont été corrigés par un conseiller. »
 
-« Concrètement, j'ai inspecté la répartition des classes, les valeurs manquantes et les différences entre groupes. La classe 2 représente 18,08 % des dossiers ; elle est moins fréquente que les classes 0 et 1. J'ai aussi repéré des écarts associés à la nationalité et des formulations textuelles répétitives. Ces constats m'ont conduit à prévoir des traitements adaptés et à garder les proxys en tête. Un écart observé dans les données ne prouve pas à lui seul que le modèle discrimine ou qu'une variable cause le résultat. »
+### Slide 17 — Courbes de seuil
 
-**Transition :** « Cette exploration m'indique quoi surveiller ; il me faut maintenant une méthode d'évaluation qui évite de faire apprendre au modèle les réponses. »
+« Ces courbes montrent le compromis entre le seuil, la part des dossiers envoyés en revue et la couverture des erreurs critiques sur OOF. Ici, “calibrer le seuil” veut dire choisir une règle de signalement ; ce n’est pas recalibrer les probabilités du modèle. Plus on demande de revues, plus on peut couvrir d’erreurs, mais cela augmente la charge des conseillers. »
 
-**Définitions :** EDA = analyse exploratoire des données ; proxy = variable pouvant refléter indirectement une caractéristique exclue ; surapprentissage = apprendre des particularités du jeu plutôt qu'une règle qui généralise à de nouveaux dossiers.
+### Slide 18 — Audit d’équité : âge et nationalité
 
-## Slide 6 - Séparer apprentissage et évaluation
+« J’ai comparé le rappel de classe 2 par groupe sur le test. Il est de 11,8 % chez les moins de 30 ans, soit 2 sur 17, et de 73,7 % chez les 50 ans et plus, soit 42 sur 57. Il est de 45 % hors UE, 9 sur 20, contre 55,7 % pour les personnes UE, 39 sur 70. Les effectifs sont petits ; ces résultats sont des signaux d’alerte, pas une preuve causale ni un certificat d’équité. J’ai conservé l’âge parce qu’il peut aider à adapter l’accompagnement et qu’il s’agit d’une information directement observée. Ce choix ne le rend pas neutre : l’écart mesuré chez les jeunes justifie une analyse approfondie. Je n’ai pas encore entraîné de variante S2 avec et sans âge ; cette ablation reste à faire. »
 
-**Message à retenir :** apprendre et se tester doivent être deux opérations distinctes.
+### Slide 19 — Décision sur S2
 
-**Ce que je peux dire :**
+« J’ai retenu S2 pour ne pas utiliser directement la nationalité dans la prédiction. Historiquement, j’ai d’abord choisi XGBoost parce qu’il avait le meilleur F1 macro parmi les modèles S2 de la comparaison initiale. Ensuite, j’ai réglé ses hyperparamètres en privilégiant le rappel parmi les configurations XGBoost. Cela n’a pas comparé ce XGBoost optimisé à des Random Forest et régressions logistiques optimisés selon le même objectif. Avec le recul, si le rappel classe 2 est prioritaire, j’aurais réévalué ces candidats avec le même protocole et une règle fixée à l’avance : rappel visé, plancher de F1 et capacité de revue. Je ne prétends pas avoir déjà établi lequel gagnerait cette nouvelle comparaison. »
 
-« J'ai séparé les données en 2 000 dossiers d'apprentissage et 500 de test. J'ai utilisé un split stratifié : il garde à peu près la même proportion de chaque classe dans les deux groupes, dont 90 dossiers de classe 2 dans le test. Ensuite, j'ai regroupé la préparation et le modèle dans un pipeline. Ainsi, les imputations, encodages et transformations du texte sont appris sur le train, puis appliqués au test sans être réajustés dessus. »
+**Si le jury demande le tuning, dire :**
 
-« Pour choisir la règle de revue, j'ai ensuite produit des prédictions OOF dans le train : chaque dossier est prédit par un modèle qui n'a pas appris sur lui. Le test sert ensuite à lire le résultat final. Il y a une réserve importante : le test a été consulté dans une version antérieure du projet. Le protocole actuel sépare le choix du seuil de cette lecture, mais je ne prétends pas que le test soit historiquement resté vierge. »
+« J’ai procédé en deux étapes. D’abord, j’ai retenu XGBoost comme candidat S2 parce qu’il avait le meilleur F1 macro de la comparaison initiale. Ensuite, j’ai testé huit configurations XGBoost sur les cinq folds du train, soit quarante évaluations. J’ai fait varier le nombre d’arbres entre 300 et 450, leur profondeur entre 5 et 7, et le taux d’apprentissage entre 0,03 et 0,05. Le sous-échantillonnage des lignes et des colonnes est resté fixé à 0,9 : il n’a pas été optimisé. Dans la grille XGBoost, j’ai classé les configurations d’abord par rappel classe 2, puis par F1 macro. La configuration retenue est 300 arbres, profondeur 5, taux d’apprentissage 0,03, avec les deux sous-échantillonnages à 0,9. Elle obtient 0,575 de rappel et 0,691 de F1 macro en CV. »
 
-**Transition :** « Avec ce protocole commun, je peux comparer l'apport des données complètes, du texte seul et des variables tabulaires. »
+« Ce résultat est meilleur que la configuration XGBoost initiale en rappel, qui était à 0,558, mais le gain reste limité : 0,017. Et je n’ai pas appliqué le même tuning aux autres familles. Je ne peux donc pas dire que ce XGBoost réglé est meilleur qu’un Random Forest ou une régression logistique réglés selon le même critère. Avec le recul, c’est cette comparaison équitable que je referais avant de confirmer le modèle. »
 
-**Concepts simples :**
+**En une phrase :** « J’ai d’abord choisi XGBoost au F1 macro, puis optimisé ses réglages sur le rappel classe 2 en CV ; cela n’a pas suffi à prouver qu’il était le meilleur candidat pour l’objectif métier. »
 
-- **Imputation :** remplacer une valeur manquante par une valeur calculée à partir du train.
-- **Encodage ordinal :** représenter le diplôme avec un ordre défini, du niveau le plus faible au plus élevé.
-- **One-hot :** transformer une catégorie, comme un métier, en indicateurs numériques séparés.
-- **TF-IDF :** transformer le texte en nombres qui donnent plus de poids aux mots informatifs qu'aux mots très courants.
-- **Fuite de données :** laisser entrer dans l'apprentissage une information qui devrait rester inconnue au moment où l'on prédit.
+### Slide 20 — Parcours d’un dossier dans le service
 
-## Slide 7 - S1 : la référence avec toutes les variables
+« Le parcours commence par la saisie du dossier, puis l’API appelle le modèle et renvoie une classe, un niveau de confiance, un statut, la version du modèle et un identifiant de requête. Le résultat peut être tracé et un feedback reçu ensuite. Les routes de santé, de métriques, de réentraînement et de rollback soutiennent ce parcours. La démonstration est locale : elle n’est pas connectée au système d’information d’une agence. »
 
-**Message à retenir :** S1 montre le meilleur F1, mais utilise aussi la variable sensible directe.
+### Slide 21 — Interface du conseiller
 
-**Ce que je peux dire :**
+« Cette capture montre le parcours dans l’interface : saisir, lancer la prédiction, lire la classe et la confiance, voir le statut “à revoir”, puis retrouver la trace. Dans l’exemple, le modèle propose la classe 1 avec 47 % de confiance ; le seuil API de 0,55 déclenche la revue. C’est une capture de démonstration, pas la preuve d’un usage réel en agence. »
 
-« J'ai d'abord gardé toutes les variables, y compris la nationalité hors UE, pour obtenir un point de comparaison. C'est S1. Son F1 macro moyen en validation croisée est de 0,708 et son rappel de classe 2 de 0,572. Sur le test, il fait neuf erreurs critiques `2 -> 0`. Cette expérience répond à la question : quel score obtient-on avec toutes les informations disponibles ? Je ne retiens pas S1 comme choix final, parce qu'il utilise directement la variable sensible. »
+### Slide 22 — Feedback humain et label terrain
 
-**Transition :** « Je regarde maintenant ce que coûte le retrait de cette variable. »
+« Il faut distinguer deux informations. Le feedback humain est l’avis ou la correction du conseiller au moment de la revue ; il peut refléter son expertise, les règles locales et ses propres biais. Le label terrain est le délai de retour à l’emploi réellement observé, qui arrive six à douze mois plus tard et peut être incomplet ou censuré. Je ne dois pas traiter l’avis immédiat comme la vérité future. »
 
-**Concepts simples :** le **F1 macro** fait la moyenne des scores F1 des trois classes, en leur donnant le même poids. Le **rappel de classe 2** indique quelle part des vrais dossiers de classe 2 est retrouvée. Ces deux scores viennent de la validation croisée ; les neuf erreurs critiques sont comptées sur le test.
+### Slide 23 — Biais de sélection des feedbacks
 
-## Slide 8 - S2 : le compromis sans variable sensible directe
+« Si je ne collecte que les dossiers envoyés en revue, mes retours porteront surtout sur les dossiers incertains ou complexes. Le modèle apprendrait alors sur un échantillon sélectionné par sa propre règle. Pour limiter ce biais, il faudrait aussi qualifier un échantillon de dossiers non signalés et établir un plan de collecte représentatif, avant d’utiliser ces labels pour réentraîner. »
 
-**Message à retenir :** S2 garde les colonnes et le texte, mais retire `nationalite_hors_ue`.
+### Slide 24 — Monitoring
 
-**Ce que je peux dire :**
+« Le monitoring présenté suit l’activité, le comportement du modèle et la fiabilité du service : volume et classes prédites, confiances et abstentions, latence, erreurs HTTP et disponibilité. Il permet de repérer des changements ou des incidents. Sans labels terrain fiables, il ne mesure pas à lui seul le rappel réel, les erreurs `2→0` ou l’équité. Les indicateurs d’équité doivent être suivis par groupes avec des effectifs suffisants et un accès autorisé aux données d’audit. »
 
-« Dans S2, j'ai retiré directement la nationalité, tout en gardant les autres colonnes et le texte de l'entretien. Le F1 macro passe de 0,708 à 0,681, et le rappel de classe 2 de 0,572 à 0,558. Sur le test, S2 compte dix erreurs critiques, contre neuf pour S1. J'accepte cette baisse mesurée pour ne pas donner directement cette information au modèle. Cela ne prouve pas l'absence de biais : d'autres informations peuvent encore jouer le rôle de proxys. »
+### Slide 25 — MLflow : run terminé ne veut pas dire promu
 
-**Transition :** « Pour comprendre la contribution de l'entretien, j'ai aussi évalué le texte tout seul. »
+« Cette capture montre un candidat terminé mais rejeté. Son F1 est d’environ 0,695 contre 0,706 pour le modèle de production ; son rappel classe 2 est d’environ 0,489 contre 0,544. Le run a fini son exécution, mais le candidat n’a pas été promu. Les paramètres, les métriques, les artefacts et la décision permettent de reconstituer ce qui s’est passé. »
 
-**Concepts simples :** un **proxy** est une autre information qui peut refléter indirectement une caractéristique sensible. Retirer une colonne ne retire donc pas nécessairement tous les signaux qui lui sont associés.
+### Slide 26 — Cycle de réentraînement et SKIP
 
-## Slide 9 - S3 : le texte seul
+« Le cycle complet prévoit une prédiction, un feedback, un réentraînement, une comparaison, puis une décision de promotion ou de rejet. Mais la capture montre six feedbacks disponibles pour un minimum de 200 : le cycle s’arrête donc avec `SKIP`. Il n’y a eu ni nouvel entraînement ni promotion ; le modèle actif reste inchangé. »
 
-**Message à retenir :** le texte aide à retrouver la classe 2, mais ne suffit pas à faire le choix final.
+### Slide 27 — Docker
 
-**Ce que je peux dire :**
+« Cette preuve montre la construction locale des images de l’API, de MLflow et du réentraînement planifié, avec une orchestration reproductible. Elle prouve le build des images, pas un déploiement en agence ni un dimensionnement cible. Je garde ce point bref et reviens aux risques métier. »
 
-« Pour S3, j'ai retiré toutes les colonnes et gardé seulement la synthèse d'entretien. En validation croisée, c'est le scénario qui retrouve le mieux la classe 2 : son rappel est de 0,661. Son F1 macro est de 0,635. Mais sur le test, il compte douze erreurs critiques `2 -> 0`, et les textes sont assez répétitifs. Je vois donc un apport du texte, mais aussi un risque de mal généraliser ; je ne le retiens pas seul. »
+### Slide 28 — CI/CD
 
-**Transition :** « Enfin, je vérifie ce que les colonnes peuvent apporter sans le texte. »
+« Le workflow automatise des contrôles, un entraînement de vérification, la construction et la publication de l’image. La réussite du workflow prouve que cette chaîne technique a passé ses étapes ; elle ne prouve ni la qualité métier du modèle ni un déploiement réel. Le job de déploiement dépend du webhook configuré. »
 
-**Concept simple :** le **rappel** répond à la question « parmi les personnes réellement en classe 2, combien le modèle a-t-il repérées ? ». Un meilleur rappel ne signifie pas qu'il fait moins toutes les autres erreurs.
+### Slide 29 — Garde-fous : slide présente dans le PPTX, absente du PDF actuel
 
-## Slide 10 - S4 : les données tabulaires sans le texte
+« Plusieurs garde-fous sont visibles : S2 exclut la nationalité de la prédiction, l’identifiant technique est séparé, les inférences sont tracées et les cas incertains peuvent être orientés en revue. Mais la classe 2 reste minoritaire, le texte est peu diversifié, l’âge est conservé et des proxys restent possibles. L’exclusion d’une variable ne garantit ni l’équité ni la conformité. »
 
-**Message à retenir :** S4 est intéressant sur ce test, mais il ne respecte pas la même contrainte que S2.
+**Important :** cette slide figure dans le PPTX mais ne semble pas avoir été exportée dans le PDF actuel. Réexporter le PDF avant la présentation ou confirmer le support qui sera projeté.
 
-**Ce que je peux dire :**
+### Slide 30 — Du prototype local à l’architecture cible
 
-« Dans S4, j'ai gardé les colonnes du dossier et retiré le texte. Le F1 macro est de 0,672 et le rappel de classe 2 de 0,589 en validation croisée. Sur le test, S4 compte huit erreurs critiques, contre dix pour S2. Mais le scénario S4 actuel conserve la nationalité ; il ne constitue donc pas une comparaison équivalente au choix éthique de S2. Et deux dossiers d'écart sur cet échantillon ne suffisent pas à prouver qu'il serait meilleur. »
+« Le prototype local réunit une interface, une API, de la traçabilité et du monitoring. L’intégration au référentiel usagers, la minimisation des flux, la sécurité, l’hébergement, la latence et les ressources CPU/RAM restent à construire ou à arbitrer. Je n’annonce pas un choix définitif entre hébergement local et cloud souverain sans validation des exigences et des capacités d’exploitation. »
 
-**Transition :** « Après avoir comparé les données et leurs résultats, je montre comment je signale les prédictions qui méritent une revue humaine. »
+### Slide 31 — Décision finale
 
-**À retenir :** les scores de F1 et de rappel sont des moyennes de validation croisée ; les nombres d'erreurs `2 -> 0` sont mesurés sur le test. Le test a été consulté dans une version antérieure du projet : ce n'est pas un holdout historiquement vierge.
+« Ma décision de projet a été S2, sans nationalité en entrée, avec XGBoost et une règle de revue humaine étudiée. Je précise aujourd’hui la limite de cet arbitrage : XGBoost a été retenu initialement pour son F1 macro, alors que Random Forest et la régression logistique avaient un meilleur rappel classe 2 en validation croisée. Si je reprenais la sélection, je fixerais d’abord avec le métier le rappel visé, le plancher de F1 et la capacité de revue, puis je comparerais à nouveau ces candidats sur OOF. La revue ne doit être intégrée qu’avec un processus humain réel, une collecte de labels fiable, un audit d’équité et une validation de l’architecture. Le modèle signale ; le conseiller décide. »
 
-## Slide 11 - Ajouter un mécanisme de revue humaine
+## Chiffres à garder sous la main
 
-**Message à retenir :** le classifieur et la politique de décision sont deux éléments distincts.
-
-**Ce que je peux dire :**
-
-« J'ai séparé la prédiction de la décision de revue. Le modèle donne une classe et trois scores ; une règle regarde ensuite s'il faut demander une vérification. Dans le notebook, il y a deux portes d'entrée vers la revue : une confiance maximale sous 0,70, OU une prédiction 0 avec `P(classe 2) >= 0,20`. Si l'une des deux conditions est vraie, le dossier est signalé. Cela attire l'attention sur un risque ; cela ne corrige pas automatiquement la prédiction. »
-
-« Cette règle combinée est évaluée dans le notebook, mais pas intégrée au service actuel. L'API utilise encore la règle simple de confiance sous 0,55. Il faut donc distinguer le seuil 0,70 étudié ici du seuil 0,55 effectivement utilisé par l'API. »
-
-**Transition :** « Le choix du seuil doit lui aussi reposer sur une méthode d'évaluation séparée du test. »
-
-**Concepts simples et exemple :**
-
-- La **confiance** est le plus grand des trois scores de probabilité du modèle. Ce n'est pas une certitude.
-- Le seuil **0,70** est celui de la règle combinée étudiée dans le notebook ; le seuil **0,55** est celui que l'API utilise actuellement.
-- Exemple : le modèle donne classe 0 avec une confiance de 0,74 et `P(classe 2) = 0,23`. Le premier critère est faux, car 0,74 dépasse 0,70. Le second est vrai : le dossier va quand même en revue.
-- Autre exemple : si la confiance maximale est 0,62, le premier critère suffit pour demander la revue, quelle que soit la classe prédite.
-- **Revue humaine / abstention :** le système signale qu'une personne doit vérifier la proposition ; ce n'est pas une quatrième classe.
-
-## Slide 12 - Choisir le seuil avec des prédictions OOF
-
-**Message à retenir :** je règle la politique sur le train, puis j'en examine le résultat sur le test.
-
-**Ce que je peux dire :**
-
-« Pour choisir le seuil sans le régler directement sur le test, j'ai découpé les données d'entraînement en cinq groupes. Chaque dossier reçoit ensuite une prédiction faite par un modèle qui ne l'a pas vu pendant son apprentissage : c'est une prédiction OOF. Sur ces prédictions, j'ai testé plusieurs seuils pour la règle de revue. J'ai retenu 0,70 : ce seuil respecte deux contraintes fixées à l'avance, un taux d'escalade sous environ 41 % et une couverture d'au moins 70 % des erreurs critiques. »
-
-« Le résultat OOF est proche des contraintes : 40,2 % des dossiers seraient revus et 72,5 % des erreurs critiques seraient signalées. J'ai ensuite regardé la règle sur le test : 200 dossiers sur 500 sont signalés. Parmi les dix erreurs `2 -> 0` de S2, huit sont repérées et deux passent à travers. Cela ne veut pas dire que le rappel général de la classe 2 est de 80 %, ni que les conseillers ont réellement corrigé les huit dossiers : je n'ai pas mesuré ce dernier point. »
-
-« Je garde deux réserves. D'abord, le test avait déjà été consulté dans une version antérieure du projet : je ne le présente donc pas comme un test resté secret depuis le début. Ensuite, les prédictions OOF ne sont pas indépendantes du choix des hyperparamètres, car je n'ai pas fait de validation imbriquée. Il faudrait une évaluation externe pour confirmer ces chiffres dans de meilleures conditions. »
-
-**Transition :** « Cette règle donne une recommandation concrète, mais aussi une charge humaine à assumer. »
-
-**Concepts simples :** OOF signifie que le dossier est prédit sans avoir servi à entraîner le modèle qui le prédit. La **couverture critique** est la part des erreurs `2 -> 0` signalées. Le **taux d'escalade** est la part de tous les dossiers envoyés en revue. Ici, choisir un seuil consiste à choisir la règle de signalement ; ce n'est pas la même chose que vérifier si les probabilités du modèle sont bien calibrées.
-
-**Si le jury approfondit :** les hyperparamètres ont été choisis avec la CV du train ; l'OOF obtenu n'est pas une validation imbriquée indépendante de ce choix. De plus, le test avait déjà été exploré dans une version antérieure. La procédure actuelle ne choisit plus le seuil sur le test, mais je ne présente pas ce test historique comme un holdout jamais consulté. Une confirmation externe serait nécessaire pour une évaluation complètement indépendante.
-
-## Slide 13 - Formuler la recommandation
-
-**Message à retenir :** le choix porte sur un modèle, des données et des conditions d'usage.
-
-**Ce que je peux dire :**
-
-« Ma recommandation est S2 avec XGBoost : il utilise à la fois les colonnes du dossier et le texte, sans utiliser directement la nationalité. Je ne le choisis pas parce qu'il gagne tous les scores, mais parce que j'accepte son compromis pour respecter cette contrainte. S1 sert de référence, S3 montre ce que le texte peut apporter, et S4 compare les colonnes sans le texte, mais conserve la nationalité. La règle de revue serait aussi à prévoir, à condition de pouvoir traiter environ 40 % des dossiers. Aujourd'hui, le modèle est accessible dans l'API de démonstration, mais cette règle combinée n'y est pas encore intégrée. Dans tous les cas, le résultat reste une aide au conseiller, pas une décision automatique. »
-
-**Transition :** « Pour rendre cette recommandation utilisable, j'ai ensuite construit une API de démonstration. »
-
-**Si le jury demande pourquoi ne pas choisir S4 :** « S4 compte deux erreurs critiques de moins sur ce test, mais ce résultat porte sur dix cas et peut varier. Surtout, le S4 actuel conserve la nationalité ; il ne répond donc pas à la même contrainte que S2. Je le garde comme diagnostic tabulaire, pas comme alternative éthique prête à déployer. »
-
-**Définitions :** hyperparamètre = réglage choisi avant l'apprentissage ; tuning = recherche de ces réglages ; production = ici service de démonstration local, pas déploiement attesté dans le SI d'une agence.
-
-## Slide 14 - Le parcours d'un dossier dans l'API
-
-**Message à retenir :** l'API accompagne un dossier de la saisie jusqu'à la trace et au feedback.
-
-**Ce que je peux dire :**
-
-« Je présente le fonctionnement comme un parcours. L'application envoie les informations du dossier à l'API ; l'API vérifie les champs et appelle le modèle chargé. Elle renvoie une classe, une confiance et un statut, par exemple “à revoir”, avec la version du modèle et un identifiant de requête. Le résultat peut ensuite être retrouvé dans l'historique et associé à un retour terrain. Les routes de santé, de métriques ou de réentraînement soutiennent ce parcours, mais ne sont pas le parcours lui-même. »
-
-**Transition :** « Je montre maintenant ce parcours du point de vue du conseiller. »
-
-**Concepts simples :** API = interface qui permet à deux logiciels d'échanger ; requête = informations envoyées au service ; réponse = résultat renvoyé ; endpoint = adresse d'une fonction de l'API ; `request_id` = identifiant technique d'un appel, pas identifiant personnel de l'usager.
-
-## Slide 15 - Montrer une prédiction et son incertitude
-
-**Message à retenir :** l'interface montre aussi les raisons de ne pas laisser passer la proposition sans revue.
-
-**Ce que je peux dire :**
-
-« Dans cette capture, le dossier retourne une classe 1 avec 47 % de confiance. Ce score est inférieur au seuil de l'API, 0,55 ; l'interface affiche donc une revue humaine recommandée. On voit également la version et le request_id, utiles pour relire l'appel. Le formulaire et l'historique démontrent le parcours d'inférence. Les boutons de réentraînement et rollback sont des fonctions d'administration de la démonstration, pas des droits que je donnerais nécessairement à tous les conseillers. »
-
-**Transition :** « Cet écran s'appuie sur plusieurs composants ; je vais montrer comment ils échangent. »
-
-**Définitions :** UI / IHM = interface utilisateur ; front-end = partie visible ; back-end = service qui traite l'appel ; historique d'inférences = traces des prédictions passées.
-
-## Slide 16 - Tracer une prédiction et son modèle
-
-**Message à retenir :** relier une prédiction à sa requête, à la version du modèle et à la décision prise.
-
-**Ce que je peux dire :**
-
-« Pour expliquer la traçabilité, je suis un dossier. L'entrée produit une prédiction avec une classe et une confiance ; l'appel reçoit un `request_id` et la version du modèle. Si un retour terrain arrive, il peut être rattaché à cette prédiction. Les expériences d'entraînement gardent aussi leurs paramètres et leurs métriques ; enfin, la décision de promotion ou de rejet est conservée et un rollback est disponible. L'objectif est de pouvoir comprendre quelle version a répondu et ce qui a été décidé ensuite. »
-
-**Transition :** « Cette trace répond à la question “quelle version a répondu ?” ; le monitoring répond à “comment le service se comporte-t-il ?”. »
-
-**Concepts simples :** `request_id` = identifiant technique d'une requête ; version du modèle = version qui a produit la réponse ; feedback = retour terrain rattaché à une prédiction ; rollback = retour à une version précédente. Un identifiant technique ne prouve pas à lui seul qu'une identité personnelle est nécessaire ou doit être conservée.
-
-## Slide 17 - Observer sans confondre activité et qualité
-
-**Message à retenir :** le monitoring rend le service visible, mais ne remplace pas les vraies étiquettes terrain.
-
-**Ce que je peux dire :**
-
-« Dans cette capture, le service est UP, les requêtes n'affichent pas d'erreur et la latence p95 affichée est d'environ 29 ms. Le dashboard montre également les classes prédites, la confiance et le taux d'abstention. Ce sont des observations sur la fenêtre de trafic simulé de la capture, pas une garantie pour toutes les charges. Le F1 affiché, 0,713, est une métrique enregistrée du modèle actif : ce n'est pas un F1 recalculé en direct à partir des requêtes. »
-
-« Pour mesurer une baisse de qualité réelle, il faut joindre les prédictions aux labels terrain. Une variation de confiance ou des classes prédites est un signal à examiner, pas une preuve automatique de dérive de performance. »
-
-**Transition :** « À cette observation du service, j'ajoute une trace des expériences qui ont produit les modèles. »
-
-**Définitions :** Prometheus = collecte de métriques ; Grafana = visualisation de ces métriques ; compteur = total d'événements ; histogramme = répartition de mesures ; drift = changement des données ou de leur relation avec la cible ; latence = durée d'une réponse.
-
-## Slide 18 - Un réentraînement peut réussir tout en étant rejeté
-
-**Message à retenir :** MLflow permet d'expliquer une décision, même quand le nouveau modèle n'est pas promu.
-
-**Ce que je peux dire :**
-
-« Cette capture est un exemple concret de candidat rejeté. Son F1 est d'environ 0,695 contre 0,706 pour le modèle actif ; son rappel de classe 2 est de 0,489 contre 0,544, soit environ 5,6 points de moins. Le run est marqué `Finished` parce que l'exécution s'est terminée ; la décision métier est `rejected`. Les sept feedbacks joints et les 2 007 lignes d'entraînement sont également tracés. »
-
-« Cela ne signifie pas que MLflow a automatiquement recalibré le modèle, ni que tous les artefacts sont dans un registre de modèles : je montre le tracking réellement utilisé. »
-
-**Transition :** « Ce rejet illustre la règle de contrôle que je vais détailler. »
-
-**Définitions :** run = une exécution suivie ; tracking = enregistrement de paramètres, métriques et fichiers ; tag = étiquette de contexte ; candidat = modèle entraîné mais pas encore actif ; Finished = exécution achevée, pas validation de la qualité.
-
-## Slide 19 - Cycle de réentraînement : un SKIP normal
-
-**Message à retenir :** le cycle automatique peut s'arrêter normalement avant l'entraînement si les retours sont trop peu nombreux.
-
-**Ce que je peux dire :**
-
-« Le schéma montre le cycle prévu : prédiction, retour terrain, réentraînement, comparaison, puis décision de promouvoir ou de rejeter le candidat. Mais la capture présentée s'arrête avant ces étapes. Elle indique six feedbacks disponibles alors que le seuil du cycle est de 200 ; le résultat est donc `SKIP`. C'est un arrêt normal : aucun entraînement, aucune comparaison et aucune promotion n'ont eu lieu. Le modèle actif reste inchangé. »
-
-« Il faut distinguer trois résultats possibles : `SKIP` si le volume de retours est insuffisant, candidat rejeté après comparaison, ou candidat promu s'il satisfait les garde-fous. La capture de cette slide montre le premier cas. La capture MLflow précédente montre le deuxième. »
-
-**Transition :** « Pour exécuter les services de façon reproductible, je les ai aussi empaquetés avec Docker. »
-
-**Définitions :** feedback = classe réelle ou annotation validée après prédiction ; reference_set = jeu figé pour comparer les versions, ici 500 dossiers dont 90 de classe 2 ; promotion = activation du candidat ; rollback = restauration d'une version précédente ; cron = planification périodique ; SKIP = cycle ignoré normalement, sans apprentissage.
-
-**Si le jury demande les règles :** tolérance de baisse du rappel = 0,005, soit 0,5 point ; tolérance de F1 = 0,01, soit 1 point, avec exception si le gain de rappel dépasse 0,01. Le garde-fou exige 20 feedbacks joints pour une promotion hors bootstrap ; c'est distinct des 200 retours déclenchant le cron. Ces règles sont des heuristiques, pas un test de significativité statistique. Réutiliser souvent le `reference_set` expose aussi à un surajustement progressif à ce jeu.
-
-## Slide 20 - Docker : construire un environnement transportable
-
-**Message à retenir :** je peux reconstruire les services à partir de leur définition.
-
-**Ce que je peux dire :**
-
-« Docker Compose décrit les services et leurs connexions : API, MLflow, Prometheus, Grafana et réentraînement planifié. La sortie affichée montre la construction réussie des trois images locales API, MLflow et retrain-cron. Prometheus et Grafana utilisent des images existantes. Cette sortie prouve le build ; les captures du service apportent une preuve d'exécution à une autre étape. Le build seul ne prouve pas que tout fonctionne. »
-
-**Transition :** « J'ai également automatisé les contrôles déclenchés par les évolutions du code. »
-
-**Définitions :** image Docker = paquet servant à lancer un service ; conteneur = instance en exécution d'une image ; Dockerfile = recette de construction ; Compose = définition de plusieurs services ; volume = stockage conservé indépendamment du conteneur.
-
-## Slide 21 - GitHub Actions : vérifier et publier
-
-**Message à retenir :** chaque modification peut être soumise à une chaîne de vérifications automatisées.
-
-**Ce que je peux dire :**
-
-« La capture montre un workflow réussi pour le commit 9d3d644 sur main, en 7 minutes 56 secondes. Il exécute les tests, un entraînement de vérification, le build et la publication de l'image. Le lint est présent mais non bloquant dans le workflow actuel. Le déploiement est conditionnel : un job vert peut correspondre à une étape ignorée si le webhook n'est pas configuré. Je ne présente donc pas ce vert comme la preuve d'un déploiement réel chez l'agence. »
-
-**Transition :** « Docker prépare l'environnement ; la CI vérifie et prépare sa livraison. »
-
-**Définitions :** CI = intégration continue, vérifications automatiques du code ; CD = livraison ou déploiement continus selon la configuration ; workflow = processus automatisé ; job = groupe d'étapes ; smoke test = vérification minimale qu'une fonction essentielle s'exécute ; lint = analyse de qualité du code ; GHCR = registre d'images de GitHub ; commit = version enregistrée du code.
-
-## Slide 22 - Les garde-fous réduisent le risque, sans supprimer les limites
-
-**Message à retenir :** j'explicite les conditions d'un usage responsable, sans annoncer une conformité totale.
-
-**Ce que je peux dire :**
-
-« J'ai mis en place des garde-fous : la nationalité est exclue de S2, les identifiants ne servent pas à prédire, les appels sont tracés et les cas incertains peuvent être revus. Mais ces mesures ne garantissent pas l'absence de biais : des proxys peuvent subsister. Il reste à valider la capacité de revue, à sécuriser l'API et à définir les durées d'accès et de conservation des traces. Le retrait d'une colonne ne certifie pas à lui seul la conformité juridique du système. »
-
-**Transition :** « Ces limites montrent ce qu'il faudrait arbitrer avant de relier la démonstration au système d'information réel. »
-
-**Définitions :** RGPD = cadre européen de protection des données personnelles ; minimisation = ne traiter que les données nécessaires ; pseudonymisation = remplacer un identifiant sans rendre toute réidentification impossible ; authentification = vérifier qui appelle ; autorisation = vérifier ses droits ; TLS = chiffrement du transport.
-
-## Slide 23 - Du prototype local à la cible SI
-
-**Message à retenir :** la démonstration existe ; l'intégration au système d'information reste une cible à concevoir et valider.
-
-**Ce que je peux dire :**
-
-« Jusqu'ici, j'ai montré une chaîne locale : une interface appelle une API, le service renvoie une classe et un niveau de confiance, puis des traces alimentent le suivi. Pour une intégration réelle, l'application conseiller devrait échanger avec le référentiel usagers et transmettre à l'API uniquement les informations nécessaires. Cette connexion n'est pas réalisée dans le projet : la slide distingue le démontré de la cible à valider. »
-
-« Le choix entre un hébergement sur site et un cloud souverain dépendrait des exigences de sécurité, de localisation des données, d'exploitation, de coût et de disponibilité. Je n'annonce pas un choix final. De même, le dimensionnement CPU/RAM et la latence en situation de charge sont à mesurer ; le temps de prédiction local ne suffit pas à les déterminer. »
-
-**Transition :** « Cette séparation entre ce qui est démontré et ce qui reste à valider résume aussi ma recommandation finale. »
-
-**Concepts à expliquer simplement :**
-
-- **Architecture cible :** le plan de circulation des données et des responsabilités dans le système futur ; ce n'est pas la preuve que les connexions sont déjà construites.
-- **Minimisation :** ne transmettre que les champs nécessaires à la prédiction, et ne pas envoyer l'identité si elle n'est pas utile au modèle.
-- **On-premise / cloud souverain :** héberger dans l'infrastructure de l'organisation ou chez un fournisseur répondant à des exigences de souveraineté ; le choix implique sécurité, compétences d'exploitation, coût et disponibilité.
-- **Dimensionnement :** estimer CPU, mémoire, stockage et capacité sous charge ; il faut tester avec un trafic représentatif, pas extrapoler d'un benchmark local seul.
-
-## Slide 24 - S2 + escalade humaine : le choix responsable à confirmer en conditions réelles
-
-**Message à retenir :** mon résultat est un compromis mesuré, accompagné de moyens de contrôle.
-
-**Ce que je peux dire :**
-
-« Je suis parti d'une erreur métier à éviter : sous-estimer une situation de longue durée. J'ai comparé plusieurs options et retenu S2, qui exclut la variable sensible directe au prix d'une baisse de performance mesurée. J'ai aussi évalué une règle qui signale huit des dix erreurs critiques du test, mais oriente environ 40 % des dossiers vers une revue. La démonstration est traçable et observable ; l'intégration SI et la capacité réelle de revue restent à valider. Ma recommandation est donc S2 avec une politique de revue humaine, sous ces conditions. »
-
-« Je ne présente pas une IA qui décide seule. Je présente une aide à la décision dont les compromis, les limites et les prochaines validations sont visibles. »
-
-**Concept à expliquer simplement :** une recommandation responsable ne consiste pas seulement à choisir un modèle ; elle précise aussi les conditions d'usage, les contrôles humains et les preuves encore nécessaires.
-
----
-
-## Mes chiffres de secours
-
-| Question | Réponse courte |
+| Sujet | Réponse |
 |---|---|
-| Combien de données ? | 2 500 dossiers, 10 colonnes sources, dont la cible. |
-| Répartition réelle ? | 936 classe 0 ; 1 112 classe 1 ; 452 classe 2. |
-| Taille du split ? | 2 000 train, 500 test ; 90 vrais classe 2 dans le test. |
-| Coût de l'exclusion, avant tuning ? | F1 CV : 0,708 -> 0,681 ; rappel classe 2 : 0,572 -> 0,558. |
-| Règle simple à 0,55 dans le notebook ? | 3 erreurs critiques sur 10 escaladées ; 19,8 % des dossiers escaladés. |
-| Règle combinée choisie ? | Seuil 0,70, OU prédiction 0 avec P(classe 2) >= 0,20. |
-| Résultat OOF ? | Environ 40,2 % d'escalade et 72,5 % de couverture critique. |
-| Résultat test de cette règle ? | 200/500 dossiers escaladés, 8/10 erreurs critiques signalées ; 2 non escaladées. |
-| API actuelle ? | Seuil simple 0,55 ; politique combinée non intégrée. |
-| Cron local ? | Toutes les 6 heures, seuil de 200 retours non consommés. |
-| Workflow retrain GitHub ? | Quotidien à 3 h UTC et lancement manuel possible. |
-| Vert signifie promotion ? | Non : SKIP, rejet et promotion sont des résultats possibles ; Finished signifie exécution terminée. |
+| Jeu de données | 2 500 dossiers ; classes 0/1/2 : 37,44 % / 44,48 % / 18,08 %. |
+| Split | 2 000 train, 500 test ; 90 vrais cas de classe 2 au test. |
+| Manquants | Âge 122 ; diplôme 84 ; synthèse 81 ; allocataire 44. Le mode du diplôme est Bac. |
+| S2, CV avant tuning | XGBoost F1 0,681 / rappel 0,558 ; Random Forest 0,645 / 0,694 ; régression logistique 0,660 / 0,674 ; LightGBM 0,664 / 0,591. |
+| Tuning XGBoost en S2 | 8 configurations × 5 folds = 40 évaluations sur le train ; choix par rappel classe 2 puis F1. Paramètres retenus : 300 arbres, profondeur 5, taux 0,03, sous-échantillonnages lignes/colonnes 0,9. CV après tuning : rappel 0,575, F1 0,691. |
+| XGBoost, test | Accuracy 0,730 ; F1 macro 0,704 ; rappel classe 2 0,533 ; ROC-AUC OVR macro 0,871. Test déjà consulté auparavant. |
+| Matrice XGBoost test | Réel en lignes, prédit en colonnes : `[[148,36,3],[34,169,20],[10,32,48]]`. |
+| Erreurs test | 10 `2→0` sur 90 ; 32 `2→1` ; 3 `0→2` sur 187 vrais classe 0. |
+| Politique combinée OOF | Seuil 0,70 OU prédiction 0 et `P(classe 2) >= 0,20` ; escalade 40,2 %, couverture `2→0` 72,5 %. |
+| Politique combinée, test | 200/500 signalés ; 8/10 `2→0` signalés ; 2 non signalés. Ce n’est pas 80 % de rappel classe 2. |
+| API actuelle | Seuil simple 0,55 ; politique combinée non intégrée. |
+| Audit âge | Rappel classe 2 : 2/17 (<30 ans), 3/11 (30–49 ans), 42/57 (50 ans et plus), 1/5 (âge manquant). Résultats descriptifs avec petits effectifs. |
+| Audit nationalité | Rappel classe 2 : 9/20 hors UE (45,0 %) et 39/70 UE (55,7 %). Résultats descriptifs avec petits effectifs. |
 
-## Réponses aux questions difficiles
+## Questions probables du jury
 
-**Pourquoi ne pas choisir S1 si son score est meilleur ?**
+**Pourquoi garder l’âge et retirer la nationalité ?**
 
-« Parce que mon critère de choix inclut le risque de discrimination directe. Je mesure le coût de l'exclusion et je conserve S1 comme comparaison, pas comme modèle de service. »
+« J’ai gardé l’âge parce que je pensais qu’il pouvait apporter une information directement utile pour adapter l’accompagnement. C’est une hypothèse métier, pas une causalité démontrée. J’ai retiré la nationalité des variables de prédiction parce que je ne voulais pas que cette caractéristique influe directement sur le classement, d’autant que l’EDA montrait un écart de classe 2 entre groupes. Je ne dis pas pour autant que l’âge est neutre : l’audit montre un écart marqué entre les moins de 30 ans et les 50 ans et plus. Il faut justifier cet usage, faire l’ablation avec et sans âge et examiner les résultats avant toute conclusion. »
 
-**Pourquoi S4 a-t-il moins d'erreurs critiques que S2 ?**
+**L’âge et la nationalité sont-ils des données sensibles ?**
 
-« Dans cette partition de test, S4 en compte huit et S2 dix. C'est un signal à discuter, pas une preuve de supériorité : il n'y a que dix erreurs critiques, et le S4 actuel conserve la nationalité. Il ne respecte donc pas la même contrainte de conception que S2. »
+« Je distingue une donnée personnelle, une catégorie particulière de données au sens de l’article 9 du RGPD et une caractéristique protégée contre la discrimination. L’âge et la nationalité sont des données personnelles et peuvent créer des risques de discrimination ; ils ne sont pas automatiquement des catégories particulières au sens de l’article 9. La nationalité peut néanmoins révéler l’origine ethnique selon le contexte. Je ne tranche pas la qualification juridique : elle doit être validée par le DPO ou le juriste. Dans mon modèle, l’âge reste une entrée ; la nationalité n’est pas envoyée pour prédire en S2 et son usage d’audit doit être séparé et autorisé. »
 
-**Le test est-il resté complètement indépendant ?**
+**Alors pourquoi ne pas retirer aussi l’âge ?**
 
-« Non. Il a été consulté dans une version antérieure. Dans la procédure actuelle, je choisis le seuil à partir des prédictions OOF du train, mais je ne présente pas le test comme un holdout vierge. Une évaluation externe serait nécessaire pour confirmer les résultats. »
+« C’est une option que je dois évaluer, pas écarter par principe. Je l’ai conservé au départ comme information potentiellement utile à l’accompagnement. Mais mon audit montre un écart important de rappel selon l’âge. Je n’ai pas encore entraîné la variante sans âge ; je ne peux donc pas affirmer que le conserver améliore le service, ni que le retirer réduirait le biais. »
 
-**Le seuil 0,70 veut-il dire que la confiance vaut 70 % ?**
+**Pourquoi XGBoost si son rappel classe 2 est le plus faible en S2 ?**
 
-« Non. 0,70 est le seuil de confiance maximale utilisé par la règle de revue étudiée. Ce n'est pas une garantie de calibration des probabilités. La politique combinée ajoute aussi le cas où le modèle prédit 0 tout en attribuant au moins 0,20 à la classe 2. »
+« Au départ, j’ai sélectionné XGBoost parce qu’il avait le meilleur F1 macro de la comparaison S2. Avec le recul, ce critère ne suffisait pas : son rappel classe 2 était de 0,558 avant tuning, contre 0,694 pour Random Forest et 0,674 pour la régression logistique. J’ai ensuite optimisé le rappel parmi les réglages de XGBoost, mais je n’ai pas comparé ce modèle optimisé à des Random Forest et régressions logistiques réglés de la même façon. Si le rappel classe 2 est prioritaire, je dois refaire cette comparaison sur OOF, avec un seuil de F1 macro et une capacité de revue définis à l’avance. Je présente donc XGBoost comme le choix historique du projet, pas comme un choix définitivement démontré. »
 
-**La slide 23 décrit-elle une intégration déjà réalisée ?**
+**Quelle erreur est acceptable ?**
 
-« Non. L'API et l'interface sont démontrées localement. La connexion au référentiel usagers, le choix d'hébergement, la sécurité et le dimensionnement appartiennent à la cible à valider. »
+« Je ne peux pas décider seul du niveau de risque acceptable. Le cadrage du notebook reprend une cible de rappel brut classe 2 entre 0,55 et 0,60, complétée par une revue humaine, et une cible révisée d’au plus 2 % d’erreurs critiques résiduelles après escalade. Le XGBoost testé a un rappel brut de 0,533, en dessous de cette fourchette. La règle combinée a laissé deux erreurs `2→0` non signalées sur 500 dossiers, soit 0,4 % de ce test, mais huit signalements sur dix ne prouvent pas que les conseillers les auraient corrigés. Le test est petit et a été consulté auparavant. Il faut faire valider ces seuils par le métier et les confirmer sur des données indépendantes avec le devenir réel des dossiers. »
 
-**Pourquoi ne pas annoncer tout de suite on-premise ou cloud souverain ?**
+**Pourquoi surveiller aussi l’erreur `0→2` ?**
 
-« Il faut comparer les exigences de confidentialité et de localisation avec les capacités d'exploitation, la disponibilité, le coût et les performances. Le projet ne mesure pas assez ces critères pour défendre un choix final. »
+« Elle est moins grave selon le brief, mais son coût n’est pas nul : elle peut provoquer une revue inutile, mobiliser du temps et retarder d’autres dossiers. Dans la matrice test de XGBoost, il y a 3 erreurs `0→2` sur 187 vrais cas de classe 0, soit 1,6 %. Je n’ai pas mesuré le coût opérationnel de ces erreurs ; je ne les présente donc ni comme gratuites ni comme équivalentes aux `2→0`. »
 
-**Pourquoi garder l'âge alors que vous retirez la nationalité ?**
+**La slide SHAP est-elle réellement une analyse SHAP ?**
 
-« Je l'ai conservé pour sa pertinence socio-professionnelle dans ce cas d'usage, en le considérant comme un facteur potentiel de biais. Ce choix nécessite un audit par tranche d'âge ; il ne dispense pas d'une justification métier et juridique. »
+« Dans la version actuelle, non : le graphique visible représente l’importance native des variables fournie par XGBoost. Il ne donne pas le sens de l’effet et ne doit pas être appelé SHAP. Je dois soit remplacer le visuel par une vraie analyse SHAP vérifiée, soit renommer la slide et expliquer cette importance native. Dans les deux cas, aucune importance ne prouve une causalité. »
 
-**Est-ce que votre système corrige 80 % des erreurs ?**
+**Le modèle est-il déployé et la règle combinée est-elle appliquée ?**
 
-« Non. Dans le test, la règle signale pour revue huit des dix erreurs 2 vers 0. Je n'ai pas mesuré le taux réel de correction par des conseillers. »
+« La démonstration locale sert le modèle S2, mais elle n’est pas intégrée au système d’information réel. L’API applique encore le seuil simple de 0,55 ; la règle combinée à 0,70 est évaluée dans le notebook et n’est pas intégrée à l’API. Le workflow CI/CD et la construction Docker ne prouvent pas un déploiement en agence. »
 
-**Est-ce que la confiance de 80 % veut dire 80 % de chances d'avoir raison ?**
+**Que signifie le résultat de réentraînement `SKIP` ?**
 
-« Pas nécessairement. C'est un score du modèle. Pour interpréter ce score comme une probabilité fiable, il faudrait vérifier et éventuellement calibrer les probabilités. »
+« Il signifie que le cycle n’a pas démarré l’entraînement, car il n’y avait que six retours non consommés pour un minimum de 200. Ce n’est ni un candidat rejeté ni une promotion. Le modèle actif est resté inchangé. »
 
-**Le modèle est-il en production ?**
+## Correspondance avec la grille CISIA
 
-« Il est servi dans une stack locale conteneurisée de démonstration. Je ne prétends pas qu'il est déployé dans le SI réel de l'agence. »
+| Compétence | Preuves à mobiliser dans la présentation | Limite à annoncer |
+|---|---|---|
+| C1 — Données adaptées au besoin | Slides 2 à 8 : usage, cible, sources fournies, variables, répartition et valeurs manquantes. | La représentativité pour une agence réelle, les droits d’accès et la qualité à long terme ne sont pas démontrés par ce jeu d’examen. |
+| C2 — Risques éthiques et sociétaux | Slides 2 à 5, 10, 18 et 29 : erreur critique, retrait de la nationalité, âge conservé, proxys, texte conseiller et écarts mesurés. | Pas de certification de conformité ni de validation DPO/juridique attestée ; ne pas conclure à l’absence de biais. |
+| C3 — Préparer les données | Slides 6 et 7 : imputations, encodages, TF-IDF, extraction du département et prétraitement dans les folds. | Le sens des blancs du diplôme reste à vérifier ; l’imputation par le mode peut masquer leur cause. |
+| C4 — Choisir un modèle adapté | Slides 8 à 19 : familles, CV, F1, rappel, ROC-AUC, matrices, coûts d’erreurs et décision. | Le critère de sélection initial (F1) est en tension avec la priorité de rappel ; les concurrents n’ont pas tous été tunés selon le même objectif. L’ablation d’âge et le recalcul comparable des scénarios restent à faire. |
+| C5 — Entraîner et optimiser | Slides 7, 8, 13 et 19 : apprentissage supervisé, validation croisée, hyperparamètres XGBoost et sélection historique. | Ne pas prétendre que les hyperparamètres des autres modèles ont été optimisés à armes égales ; pas de transfert de connaissances effectué. |
+| C6 — Intégrer les briques techniques | Slides 20 à 28 : API, interface, version, logs, MLflow, retrain, Docker et CI/CD. | La règle combinée n’est pas dans l’API ; le déploiement et l’intégration réels ne sont pas démontrés. |
+| C7 — Architecture cible | Slide 30 : flux local démontré versus intégration, sécurité, hébergement, latence et dimensionnement à arbitrer. | Pas de décision d’hébergement final ni de preuve de consultation formelle des acteurs métier/techniques. |
+| C8 — Mesurer performance et impacts | Slides 13, 16 à 18 et 24 : erreurs, OOF, test, sous-groupes, métriques de service et seuils. | La performance réelle à long terme exige des labels terrain ; l’audit porte sur de petits effectifs et le test n’est pas historiquement vierge. |
+| C9 — Amélioration continue | Slides 22 à 28 : feedback, biais de sélection, monitoring, run rejeté, `SKIP`, versioning et CI/CD. | Le feedback humain n’est pas le résultat réel différé ; prévoir une collecte représentative, un contrôle des dossiers non signalés et une évaluation périodique. |
 
-**Pourquoi la latence du notebook et celle de Grafana sont-elles différentes ?**
-
-« Le notebook mesure un temps de traitement de batch divisé par le nombre de dossiers ; ce n'est pas le p95 de requêtes individuelles. Grafana mesure la latence instrumentée de l'API. Ces mesures n'ont pas le même périmètre et ne doivent pas être assimilées. »
-
-**Le coût CPU annoncé est-il un coût d'hébergement réel ?**
-
-« Non. C'est une estimation illustrative sous une hypothèse de prix, pas une facture. Le temps mur mesuré ne représente pas directement les secondes CPU, surtout avec du parallélisme. Il faut intégrer les ressources allouées, le stockage, les services annexes et le coût de disponibilité pour chiffrer l'hébergement. »
-
-**La promotion refuse-t-elle tous les petits gains statistiques ?**
-
-« Non. Elle applique des tolérances de métriques et un seuil de volume des feedbacks. Ce ne sont pas des intervalles de confiance ni des tests statistiques de significativité. »
-
-## Mots à remplacer quand je bloque
-
-| Terme | Formulation simple à l'oral |
-|---|---|
-| Features | Informations utilisées pour prédire |
-| Preprocessing | Préparation des données |
-| Fit | Apprentissage des paramètres |
-| Transform | Application de la préparation déjà apprise |
-| Pipeline | Chaîne de préparation et de prédiction |
-| Stratifié | Qui conserve la proportion des classes |
-| Fold | Un des groupes de la validation croisée |
-| OOF | Prédiction d'un dossier par un modèle qui ne l'a pas appris |
-| Recall | Part des situations réelles que le modèle détecte |
-| Couverture critique | Part des erreurs graves que la règle envoie en revue |
-| Seuil de décision | Limite utilisée par la règle pour demander une revue |
-| Proxy | Variable indirecte qui peut transporter une information sensible |
-| Inférence | Calcul d'une prédiction |
-| Endpoint | Fonction accessible par une adresse de l'API |
-| Artefact | Fichier du modèle et de sa préparation |
-| Monitoring | Surveillance du service et de son comportement |
-| Tracking | Historique des expériences et de leurs résultats |
-| Architecture cible | Plan des flux et responsabilités dans le système futur |
-| Minimisation | Ne transmettre que les informations nécessaires |
-| Dimensionnement | Estimation des ressources nécessaires sous charge |
-| Retrain | Réentraînement sur les données disponibles |
-| Promotion | Activation d'un modèle candidat |
-| Rollback | Retour à une version précédente |
-| CI/CD | Vérification et livraison automatisées du code |
-
-**Dernier repère :** si je ne sais pas répondre, je distingue ce qui est mesuré, ce qui est implémenté et ce qui reste une hypothèse. Je n'invente pas une garantie pour combler une hésitation.
+**Conclusion sur la grille :** la présentation apporte des éléments pour les neuf compétences, mais certaines preuves restent des propositions ou des limites déclarées plutôt que des réalisations. Les nommer ainsi est plus solide que les présenter comme déjà validées.
